@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>教材棚</title>
+<meta name="theme-color" content="#2b2520">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="教材棚">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="app.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<main id="library" class="page">
+  <header class="top">
+    <h1><a href="#/">教材棚</a></h1>
+    <div class="topR">
+      <span id="offline" class="status"></span>
+      <button id="manage" type="button" class="ghost">管理</button>
+    </div>
+  </header>
+  <nav id="crumbs" class="crumbs" aria-label="現在のフォルダ"></nav>
+  <div id="tools" class="tools" hidden>
+    <label class="btn primary" for="fileInput">＋ HTMLを追加</label>
+    <input id="fileInput" class="visually-hidden" type="file" accept=".html,.htm,text/html" multiple>
+    <button id="newFolder" type="button" class="btn">新しいフォルダ</button>
+    <button id="logout" type="button" class="ghost">管理を終える</button>
+  </div>
+  <section id="folders" class="folders" aria-label="フォルダ"></section>
+  <section id="items" class="items" aria-label="教材"></section>
+  <p id="empty" class="empty" hidden></p>
+</main>
+
+<section id="viewer" hidden>
+  <div class="vbar">
+    <button id="back" type="button" class="vb">‹ 一覧</button>
+    <div id="vtitle" class="vtitle"></div>
+    <button id="reload" type="button" class="vb">最初から</button>
+    <button id="draw" type="button" class="vb" aria-pressed="false">✎ 書き込み</button>
+    <button id="full" type="button" class="vb" hidden>全画面</button>
+  </div>
+  <div id="stage" class="stage">
+    <iframe id="frame" title="教材" sandbox="allow-scripts allow-popups allow-forms allow-modals" allow="fullscreen; autoplay"></iframe>
+    <canvas id="ink" aria-label="書き込み"></canvas>
+    <div id="pens" class="pens" hidden>
+      <button type="button" class="pen on" data-c="#eeebe0" style="--k:#eeebe0" aria-label="白"></button>
+      <button type="button" class="pen" data-c="#ffd064" style="--k:#ffd064" aria-label="黄"></button>
+      <button type="button" class="pen" data-c="#ff8466" style="--k:#ff8466" aria-label="赤"></button>
+      <button type="button" class="pen" data-c="#72c8ff" style="--k:#72c8ff" aria-label="青"></button>
+      <button type="button" id="eraser" class="tool">消しゴム</button>
+      <button type="button" id="undo" class="tool">戻す</button>
+      <button type="button" id="clear" class="tool">全消去</button>
+    </div>
+    <p id="loadmsg" class="loadmsg" hidden></p>
+  </div>
+</section>
+
+<dialog id="dlg"><form method="dialog" id="dlgForm"></form></dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>

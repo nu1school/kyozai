@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>いろいろな立体の体積 例2・例3</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* レイアウト：黒板の中に「立体（大）＋真上・切り口・グラフ（小）」、その下に手順と式 */
+:root{
+  --board:#1c2e28; --board2:#233a33; --frame:#6b4f35; --room:#2b2520;
+  --chalk:#eeebe0; --dim:#9fb1a8; --paper:#cdbfa9;
+  --coral:#ff8466; --blue:#72c8ff; --yellow:#ffd064; --purple:#c0a6ff;
+  --sans:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;
+  --mincho:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP",serif;
+  --math:"Times New Roman","Hiragino Mincho ProN","Yu Mincho",serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--room);color:var(--chalk);font-family:var(--sans)}
+.page{max-width:1240px;margin:0 auto;padding-block:10px 40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 20px}
+h1{font-family:var(--mincho);font-weight:600;font-size:clamp(19px,2.2vw,26px);letter-spacing:.04em;margin:0;text-wrap:balance}
+.tabs{display:flex;gap:6px}
+.tabs button{font:inherit;font-size:15px;font-weight:700;padding:5px 20px;cursor:pointer;color:var(--paper);
+  background:transparent;border:1.5px solid rgba(205,191,169,.45);border-radius:6px}
+.tabs button.on{background:var(--chalk);color:var(--board);border-color:var(--chalk)}
+.sub{color:var(--paper);margin:5px 0 8px;font-size:14.5px;line-height:1.5;max-width:90em}
+.board{background:radial-gradient(ellipse at 40% 30%,var(--board2),var(--board) 70%);
+  border:8px solid var(--frame);border-radius:6px;
+  box-shadow:inset 0 0 60px rgba(0,0,0,.45),0 10px 30px rgba(0,0,0,.4);padding:8px 10px 6px}
+.stage{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(0,1fr);gap:10px}
+.side{display:flex;flex-direction:column;gap:10px;min-width:0}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.pn{min-width:0;border:1px solid rgba(238,235,224,.14);border-radius:4px;transition:border-color .3s,background .3s}
+.pn.on{border-color:var(--yellow);background:rgba(255,208,100,.05)}
+.pn.main{border-color:transparent}
+canvas{display:block;width:100%}
+#c3{cursor:grab;touch-action:none}
+#c3:active{cursor:grabbing}
+.tray{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 4px 2px;
+  border-top:1px dashed rgba(238,235,224,.18);margin-top:6px}
+#play{font:inherit;font-size:17px;font-weight:700;color:var(--board);background:var(--chalk);
+  border:none;border-radius:999px;padding:11px 22px;cursor:pointer;min-width:132px;box-shadow:0 3px 0 #b9b4a4}
+#play:active{transform:translateY(2px);box-shadow:0 1px 0 #b9b4a4}
+button:focus-visible,input:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+.ctl{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--dim)}
+.ctl input[type=range]{accent-color:var(--yellow);min-width:0}
+.grow{flex:1 1 150px}
+.grow input{flex:1}
+#xv{font-family:var(--math);font-size:16px;color:var(--chalk);min-width:4.2em;font-variant-numeric:tabular-nums}
+.speed button,#resetView{font:inherit;font-size:13px;background:transparent;color:var(--dim);
+  border:1px solid rgba(238,235,224,.3);padding:5px 10px;cursor:pointer}
+.speed{gap:0}
+.speed button:first-child{border-radius:6px 0 0 6px}
+.speed button:last-child{border-radius:0 6px 6px 0}
+.speed button+button{border-left:none}
+.speed button.on{background:rgba(238,235,224,.15);color:var(--chalk)}
+#resetView{border-radius:6px}
+.left{display:flex;flex-direction:column;gap:8px;min-width:0}
+.lower{margin-top:18px}
+ol.steps{list-style:none;margin:0;padding:0;counter-reset:s;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:4px 12px}
+ol.steps li{counter-increment:s;position:relative}
+ol.steps button{display:block;width:100%;text-align:left;font:inherit;background:transparent;cursor:pointer;
+  padding:9px 12px 9px 48px;border:none;border-left:3px solid transparent;color:#a99d8b;line-height:1.65;font-size:14.5px;transition:color .3s,background .3s}
+ol.steps li::before{content:counter(s);position:absolute;left:14px;top:10px;width:24px;height:24px;color:#a99d8b;
+  border-radius:50%;border:1.5px solid currentColor;text-align:center;font-size:13px;line-height:21px;pointer-events:none}
+ol.steps b{display:block;font-size:15.5px;color:inherit}
+ol.steps li.on button{color:#f3ead8;border-left-color:var(--yellow);background:rgba(255,208,100,.07)}
+ol.steps li.on::before{color:var(--yellow)}
+ol.steps li.done button,ol.steps li.done::before{color:#d8ccb7}
+.eq{border-top:1px dashed rgba(238,235,224,.18);padding:6px 6px 0;min-width:0;overflow-x:auto}
+#capt{margin:0 0 2px;font-size:14.5px;line-height:1.55;color:#f3ead8;min-height:3.1em}
+#eq{display:grid;grid-template-rows:repeat(3,auto);grid-auto-flow:column;grid-auto-columns:minmax(max-content,1fr);column-gap:18px}
+.ln{font-family:var(--math);font-size:clamp(18px,1.9vw,22px);min-height:46px;display:flex;align-items:center;
+  white-space:nowrap;opacity:0;visibility:hidden;transition:opacity .4s}
+.ln.show{opacity:1;visibility:visible}
+.ln i{font-style:italic}
+.ln sup{font-size:.62em;line-height:0}
+.ln .fr,.ln .in,.ln .br{margin:0 .12em}
+.ln small{font-family:var(--sans);font-size:13px;color:var(--dim);margin-left:.6em}
+.c{color:var(--coral)} .y{color:var(--yellow)} .p{color:var(--purple)}
+.ans{color:var(--yellow);font-weight:700}
+.fr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.08;font-size:.82em}
+.fr>span:first-child{border-bottom:1.3px solid currentColor;padding:0 .22em .08em}
+.fr>span:last-child{padding:.08em .22em 0}
+.rt{display:inline-flex;align-items:baseline}
+.rt>span{border-top:1.3px solid currentColor;padding:.04em .15em 0;margin-left:.02em}
+.in{display:inline-flex;align-items:center}
+.in .s{font-size:1.75em;line-height:1;margin-right:.05em}
+.lm{display:inline-flex;flex-direction:column;justify-content:space-between;font-size:.62em;line-height:1.5}
+.br{font-size:1.65em;line-height:1;font-weight:300}
+.note{font-size:13px;color:var(--dim);line-height:1.7;margin:8px 0 0}
+@media (max-width:820px){
+  .stage{grid-template-columns:minmax(0,1fr)}
+  .left{display:contents}
+  .left .main{order:1}.side{order:2}.eq{order:3}
+  #eq{grid-template-rows:none;grid-auto-flow:row}
+}
+@media (prefers-reduced-motion:reduce){ol.steps button,.pn,.ln{transition:none}}
+</style>
+
+<div class="page">
+  <div class="head">
+    <h1>切り口を積み重ねると体積になる</h1>
+    <div class="tabs" role="group" aria-label="例の切りかえ">
+      <button type="button" id="tab2">例2</button>
+      <button type="button" id="tab3">例3</button>
+    </div>
+  </div>
+  <p class="sub" id="prob"></p>
+
+  <div class="board">
+    <div class="stage">
+      <div class="left">
+        <div class="pn main"><canvas id="c3" aria-label="立体の3D図。ドラッグで回転できます"></canvas></div>
+        <div class="eq" id="eqbox">
+          <p id="capt"></p>
+          <div id="eq"></div>
+        </div>
+      </div>
+      <div class="side">
+        <div class="two">
+          <div class="pn" id="pTop"><canvas id="cTop" aria-label="真上から見た図"></canvas></div>
+          <div class="pn" id="pSec"><canvas id="cSec" aria-label="切り口を正面から見た図"></canvas></div>
+        </div>
+        <div class="pn" id="pGr"><canvas id="cGr" aria-label="切り口の面積のグラフ"></canvas></div>
+      </div>
+    </div>
+    <div class="tray">
+      <button id="play" type="button">▶ スタート</button>
+      <div class="ctl grow"><label for="scrub">経過</label><input id="scrub" type="range" min="0" max="1" step="0.001" value="0"></div>
+      <div class="ctl grow"><label for="xs">切り口の位置</label><input id="xs" type="range" min="-1" max="1" step="0.01" value="0.6"><span id="xv"></span></div>
+      <div class="ctl speed" role="group" aria-label="再生速度">
+        <button type="button" data-s="0.5">ゆっくり</button><button type="button" data-s="1" class="on">ふつう</button><button type="button" data-s="1.8">はやい</button>
+      </div>
+      <label class="ctl"><input id="stopEach" type="checkbox"> 場面ごとに止める</label>
+      <button id="resetView" type="button">視点を戻す</button>
+    </div>
+  </div>
+
+  <div class="lower">
+    <ol class="steps" id="steps"></ol>
+    <p class="note">立体の図は指やマウスでドラッグすると回せます。「切り口の位置」を動かすと、好きな場所の切り口で止められます。</p>
+  </div>
+</div>
+
+<script>
+(function(){
+const PI=Math.PI,TAU=2*PI;
+const C={chalk:"#eeebe0",dim:"#9fb1a8",coral:"#ff8466",blue:"#72c8ff",yellow:"#ffd064",purple:"#c0a6ff",board:"#1c2e28"};
+const BLUE=[114,200,255],CHALK=[238,235,224];
+const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $=id=>document.getElementById(id);
+
+// タイムライン（秒）：例2・例3で共通
+const TL={a:[.4,3.6],b:[3.9,6.1],sweep:[6.4,12],ret:[12,13],f1:[13.4,15.2],f2:[15.4,17.2],f3:[17.4,19.1],build:[19.4,25],slabs:[25.4,31],ans:[31.4,37]};
+const T_END=37.6, STEP_START=[0,3.9,6.4,13.4,19.4,25.4];
+const NS=[4,8,16,32,64];
+
+const frac=(a,b)=>`<span class="fr"><span>${a}</span><span>${b}</span></span>`;
+const rt=s=>`<span class="rt">√<span>${s}</span></span>`;
+const integ=(lo,hi)=>`<span class="in"><span class="s">∫</span><span class="lm"><span>${hi}</span><span>${lo}</span></span></span>`;
+const brk=(s,lo,hi)=>`<span class="br">[</span>${s}<span class="br">]</span><span class="lm"><span>${hi}</span><span>${lo}</span></span>`;
+const r2x2=(v)=>`<i>${v}</i><sup>2</sup>−<i>x</i><sup>2</sup>`;
+const prim=v=>`<i>${v}</i><sup>2</sup><i>x</i>−${frac('<i>x</i><sup>3</sup>','3')}`;
+
+const EX={
+ 2:{v:'r',
+  prob:'例2　半径 r，高さ r の円柱を，底面の直径を通り底面と 45° をなす平面で切った小さい方の立体',
+  sec:(h,k)=>[[0,0],[h,0],[h,h*k]],
+  S:x=>.5*(1-x*x), Smax:.5, SmaxL:'r²/2',
+  cum:x=>.5*(x-x*x*x/3+2/3), exact:2/3, exactL:'(2/3)r³',
+  zc:.3,fit:3.3,
+  steps:[
+   ['円柱を平面で切る','底面の直径を軸にして平面を傾け，底面と 45° にする。この直径を x 軸にとる。'],
+   ['小さい方を取り出す','平面より上をどかすと，くさび形の立体が残る。'],
+   ['x 軸に垂直に切る','切り口はいつも直角二等辺三角形 ABC。A を −r から r まで動かすと，大きさだけが変わる。'],
+   ['切り口の面積を式にする','真上から見ると △OAB で三平方の定理。AB も AC も x 軸に垂直だから ∠BAC = 45° で，BC = AB。'],
+   ['切り口を積み重ねる','S(x) を −r から r まで集めると立体になる。グラフの塗った部分の面積が，ここまでの体積。'],
+   ['枚数を増やして積分へ','薄い板を 4，8，16，32，64 枚と増やすと，合計は (2/3)r³ に近づく。これが定積分。']],
+  eq:[
+   [`<span class="y">AB</span> = ${rt(r2x2('r'))}<small>△OAB で三平方</small>`,'f1'],
+   [`<span class="p">BC</span> = <span class="y">AB</span><small>∠BAC = 45°</small>`,'f2'],
+   [`<span class="c"><i>S</i>(<i>x</i>)</span> = ${frac('1','2')}·<span class="y">AB</span>·<span class="p">BC</span> = ${frac('1','2')}(${r2x2('r')})`,'f3'],
+   [`<i>V</i> = ${integ('−<i>r</i>','<i>r</i>')}${frac('1','2')}(${r2x2('r')}) <i>dx</i>`,'build'],
+   [`= ${frac('1','2')}${brk(prim('r'),'−<i>r</i>','<i>r</i>')}`,'ans'],
+   [`<span class="ans">= ${frac('2','3')}<i>r</i><sup>3</sup></span>`,'ans2']]},
+ 3:{v:'a',
+  prob:'例3　円 x²+y²=a² の弦 PQ を 1 辺とする正方形を x 軸に垂直に立て，x を −a から a まで動かしたときに通過する立体',
+  sec:(h,k)=>[[-h,0],[h,0],[h,2*h*k],[-h,2*h*k]],
+  S:x=>4*(1-x*x), Smax:4, SmaxL:'4a²',
+  cum:x=>4*(x-x*x*x/3+2/3), exact:16/3, exactL:'(16/3)a³',
+  zc:.8,fit:3.75,
+  steps:[
+   ['円と弦 PQ','M を x 軸上で動かすと，弦 PQ の長さが変わる。'],
+   ['正方形を立てる','x 軸に垂直な面に，PQ を 1 辺とする正方形を立てる。'],
+   ['M を動かす','M が円の端に近いほど正方形は小さくなり，端では点になる。通過した跡が立体。'],
+   ['切り口の面積を式にする','真上から見ると △OMP で三平方の定理。PQ は MP の 2 倍で，正方形だから S = PQ²。'],
+   ['切り口を積み重ねる','S(x) を −a から a まで集めると立体になる。グラフの塗った部分の面積が，ここまでの体積。'],
+   ['枚数を増やして積分へ','薄い板を 4，8，16，32，64 枚と増やすと，合計は (16/3)a³ に近づく。これが定積分。']],
+  eq:[
+   [`MP = ${rt(r2x2('a'))}<small>△OMP で三平方</small>`,'f1'],
+   [`<span class="y">PQ</span> = 2${rt(r2x2('a'))}`,'f2'],
+   [`<span class="c"><i>S</i>(<i>x</i>)</span> = <span class="y">PQ</span><sup>2</sup> = 4(${r2x2('a')})`,'f3'],
+   [`<i>V</i> = ${integ('−<i>a</i>','<i>a</i>')}4(${r2x2('a')}) <i>dx</i>`,'build'],
+   [`= 4${brk(prim('a'),'−<i>a</i>','<i>a</i>')}`,'ans'],
+   [`<span class="ans">= ${frac('16','3')}<i>a</i><sup>3</sup></span>`,'ans2']]}
+};
+
+let cur=2,ex=EX[2];
+const T0=TL.a[1];
+let t=T0,fresh=true,playing=false,speed=1,last=0,manual=null;
+const VIEW={yaw:.42,pitch:.5};
+let yaw=VIEW.yaw,pitch=VIEW.pitch;
+
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const ease=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const lerp=(a,b,k)=>a+(b-a)*k;
+const P=k=>clamp((t-TL[k][0])/(TL[k][1]-TL[k][0]));
+const reached=k=>k==='ans2'?t>=TL.ans[0]+.9:t>=TL[k][0];
+const H=x=>Math.sqrt(Math.max(0,1-x*x));
+const fm=(v,d=2)=>(v<0?'−':'')+Math.abs(v).toFixed(d);
+
+// 現在の切り口の位置
+function X(){
+  if(manual!==null&&t<TL.slabs[0])return manual;
+  if(cur===3&&t<TL.a[1])return lerp(-1,.6,ease(P('a')));
+  if(t<TL.sweep[0])return .6;
+  if(t<TL.sweep[1]){const p=P('sweep');return p<.2?lerp(.6,-1,ease(p/.2)):lerp(-1,1,(p-.2)/.8)}
+  if(t<TL.ret[1])return lerp(1,.6,ease(P('ret')));
+  if(t<TL.build[0])return .6;
+  if(t<TL.build[1]){const p=P('build');return p<.12?lerp(.6,-1,ease(p/.12)):lerp(-1,1,(p-.12)/.88)}
+  return 1;
+}
+function buildTo(){
+  if(t<TL.build[0]||t>=TL.slabs[0])return null;
+  if(manual!==null)return manual;
+  const p=P('build');return p<.12?-1:X();
+}
+function curN(){if(t<TL.slabs[0]||t>=TL.ans[0])return 0;return NS[Math.min(4,Math.floor(P('slabs')*5))]}
+function riemann(n){let s=0,d=2/n;for(let i=0;i<n;i++)s+=ex.S(-1+(i+.5)*d)*d;return s}
+function secAlpha(){
+  if(t>=TL.slabs[0])return 0;
+  if(cur===3)return 1;
+  return clamp((t-TL.sweep[0])/.4);
+}
+
+// ---- キャンバス ----
+const mk=id=>{const c=$(id);return{c,g:c.getContext('2d'),w:0,h:0}};
+const c3=mk('c3'),cTop=mk('cTop'),cSec=mk('cSec'),cGr=mk('cGr');
+function fit(o,w,h){const d=window.devicePixelRatio||1;o.w=w;o.h=h;o.c.style.height=h+'px';o.c.width=Math.round(w*d);o.c.height=Math.round(h*d);o.g.setTransform(d,0,0,d,0,0)}
+function resize(){
+  const wide=window.innerWidth>820;
+  const w3=c3.c.parentElement.clientWidth;
+  const tray=document.querySelector('.tray').offsetHeight, eqH=$('eqbox').offsetHeight;
+  const top=c3.c.parentElement.getBoundingClientRect().top+window.scrollY;
+  const avail=window.innerHeight-top-tray-eqH-36;
+  const h3=wide?Math.max(250,Math.min(avail,w3*.82)):Math.max(300,w3*.86);
+  fit(c3,w3,h3);
+  const ws=cTop.c.parentElement.clientWidth;
+  const total=h3+eqH+8;
+  const hs=wide?Math.max(195,Math.min(ws*1.08,total*.47)):Math.max(205,ws*1.1);
+  fit(cTop,ws,hs);fit(cSec,cSec.c.parentElement.clientWidth,hs);
+  const wg=cGr.c.parentElement.clientWidth;
+  fit(cGr,wg,wide?Math.max(150,total-hs-10):Math.max(190,wg*.55));
+  drawAll();
+}
+function tx(g,s,x,y,o={}){
+  const sz=o.size||14;
+  g.font=`${o.it?'italic ':''}${o.bold?'700 ':''}${sz}px ${o.sans?'"Hiragino Sans","Yu Gothic","Meiryo",sans-serif':'"Times New Roman","Hiragino Mincho ProN","Yu Mincho",serif'}`;
+  g.textAlign=o.al||'center';g.textBaseline=o.bl||'middle';
+  g.lineJoin='round';g.lineWidth=3.5;g.strokeStyle='rgba(28,46,40,.92)';g.strokeText(s,x,y);
+  g.fillStyle=o.c||C.chalk;g.fillText(s,x,y);
+}
+function panelTitle(o,s){tx(o.g,s,8,13,{al:'left',size:13,c:C.dim,sans:true})}
+
+// ---- 3D（平行投影） ----
+let cy,sy,cp,sp,V3,S3,OX,OY;
+function setView(extra){
+  const y=yaw+extra;cy=Math.cos(y);sy=Math.sin(y);cp=Math.cos(pitch);sp=Math.sin(pitch);
+  V3=[sy*cp,-cy*cp,sp];
+}
+function pr(p){
+  const sx=p[0]*cy+p[1]*sy, d=-p[0]*sy+p[1]*cy, up=(p[2]-ex.zc)*cp+d*sp;
+  return [OX+sx*S3,OY-up*S3];
+}
+function pathOf(g,pts,close){g.beginPath();pts.forEach((p,i)=>{const q=pr(p);i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1])});if(close)g.closePath()}
+function line3(g,a,b,col,lw,dash){g.strokeStyle=col;g.lineWidth=lw;g.setLineDash(dash||[]);pathOf(g,[a,b]);g.stroke();g.setLineDash([])}
+function curve3(g,fn,n,col,lw,dash){const pts=[];for(let i=0;i<=n;i++)pts.push(fn(i/n));g.strokeStyle=col;g.lineWidth=lw;g.setLineDash(dash||[]);pathOf(g,pts);g.stroke();g.setLineDash([])}
+const L=(()=>{const v=[.42,-.62,.66],m=Math.hypot(...v);return v.map(a=>a/m)})();
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+function face(g,pts,n,rgb,alpha,edge){
+  const m=Math.hypot(...n);if(m<1e-11)return;
+  const u=n.map(a=>a/m);if(dot(u,V3)<=1e-5)return;
+  const k=.44+.46*Math.max(0,dot(u,L));
+  const col=`rgb(${rgb.map(c=>Math.min(255,Math.round(c*k))).join(',')})`;
+  g.globalAlpha=alpha;g.fillStyle=col;pathOf(g,pts,true);g.fill();
+  if(alpha>=.99){g.strokeStyle=col;g.lineWidth=.8;g.stroke()}
+  if(edge){g.strokeStyle='rgba(20,34,29,.6)';g.lineWidth=.9;g.stroke()}
+  g.globalAlpha=1;
+}
+function loft(g,a,b,n,stepped,rgb,alpha,edge){
+  if(b-a<1e-6)return;
+  const fwd=V3[0]>0;
+  for(let q=0;q<n;q++){
+    const i=fwd?q:n-1-q, x0=a+(b-a)*i/n, x1=a+(b-a)*(i+1)/n, xm=(x0+x1)/2;
+    const s0=ex.sec(H(stepped?xm:x0),1), s1=ex.sec(H(stepped?xm:x1),1), m=s0.length;
+    const P0=s0.map(p=>[x0,p[0],p[1]]), P1=s1.map(p=>[x1,p[0],p[1]]);
+    const c=[xm,0,0];for(const p of [...P0,...P1]){c[1]+=p[1]/(2*m);c[2]+=p[2]/(2*m)}
+    for(let j=0;j<m;j++){
+      const k=(j+1)%m, q0=P0[j],q1=P1[j],q2=P1[k],q3=P0[k];
+      const d1=[q2[0]-q0[0],q2[1]-q0[1],q2[2]-q0[2]],d2=[q3[0]-q1[0],q3[1]-q1[1],q3[2]-q1[2]];
+      let nr=[d1[1]*d2[2]-d1[2]*d2[1],d1[2]*d2[0]-d1[0]*d2[2],d1[0]*d2[1]-d1[1]*d2[0]];
+      const f=[(q0[0]+q2[0])/2-c[0],(q0[1]+q2[1])/2-c[1],(q0[2]+q2[2])/2-c[2]];
+      if(dot(nr,f)<0)nr=nr.map(v=>-v);
+      face(g,[q0,q1,q2,q3],nr,rgb,alpha,edge);
+    }
+    if(stepped||i===0)face(g,P0,[-1,0,0],rgb,alpha,edge);
+    if(stepped||i===n-1)face(g,P1,[1,0,0],rgb,alpha,edge);
+  }
+}
+function secPts(x,k){return ex.sec(H(x),k).map(p=>[x,p[0],p[1]])}
+
+function chunk(g,lift,alpha){
+  // 例2：平面より上の部分
+  const o=[0,-.707*lift*1.7,.707*lift*1.7], at=p=>[p[0]+o[0],p[1]+o[1],p[2]+o[2]];
+  const n=96;g.globalAlpha=alpha*.11;g.fillStyle=C.chalk;
+  for(let i=0;i<n;i++){
+    const a=TAU*i/n,b=TAU*(i+1)/n,zb=f=>Math.max(0,Math.sin(f));
+    pathOf(g,[[Math.cos(a),Math.sin(a),zb(a)],[Math.cos(b),Math.sin(b),zb(b)],[Math.cos(b),Math.sin(b),1],[Math.cos(a),Math.sin(a),1]].map(at),true);g.fill();
+  }
+  const top=[];for(let i=0;i<=n;i++){const a=TAU*i/n;top.push(at([Math.cos(a),Math.sin(a),1]))}
+  pathOf(g,top,true);g.fill();
+  g.globalAlpha=alpha;
+  g.strokeStyle='rgba(238,235,224,.75)';g.lineWidth=1.4;pathOf(g,top,true);g.stroke();
+  const low=[];for(let i=0;i<=48;i++){const a=PI+PI*i/48;low.push(at([Math.cos(a),Math.sin(a),0]))}
+  pathOf(g,low);g.stroke();
+  const f0=Math.atan2(V3[0],-V3[1]);
+  for(const f of [f0,f0+PI]){const zb=Math.max(0,Math.sin(f));pathOf(g,[at([Math.cos(f),Math.sin(f),zb]),at([Math.cos(f),Math.sin(f),1])]);g.stroke()}
+  g.globalAlpha=1;
+}
+
+function draw3D(){
+  const o=c3,g=o.g;g.clearRect(0,0,o.w,o.h);
+  const spin=(!reduce&&t>TL.ans[0])?TAU*ease(clamp((t-TL.ans[0]-1)/(TL.ans[1]-TL.ans[0]-1))):0;
+  setView(spin);
+  S3=Math.min(o.w/3.95,o.h/ex.fit);OX=o.w/2;OY=o.h*.53;
+  const x=X(),h=H(x),pa=ease(P('a')),pb=ease(P('b')),sA=secAlpha(),n3=cur===3;
+
+  // 床の円
+  const ring=f=>[Math.cos(TAU*f),Math.sin(TAU*f),0];
+  const rp=[];for(let i=0;i<96;i++)rp.push(ring(i/96));
+  g.globalAlpha=.1;g.fillStyle=C.chalk;pathOf(g,rp,true);g.fill();g.globalAlpha=1;
+  g.strokeStyle='rgba(238,235,224,.6)';g.lineWidth=1.4;pathOf(g,rp,true);g.stroke();
+  line3(g,[0,-1.3,0],[0,1.35,0],'rgba(238,235,224,.3)',1.1);
+  const py=pr([0,1.35,0]);tx(g,'y',py[0]+8,py[1]-6,{it:1,size:15,c:C.dim});
+
+  // 立体
+  let ghost=0;
+  if(!n3){
+    if(t<TL.sweep[0])ghost=lerp(.12,1,pb);
+    else if(t<TL.build[0])ghost=lerp(1,.22,clamp((t-TL.sweep[0])/.7));
+    else if(t<TL.slabs[0])ghost=.1;
+    else if(t>=TL.ans[0])ghost=1;
+  }else{
+    if(t>=TL.ret[0]&&t<TL.build[0])ghost=.2*P('ret');
+    else if(t>=TL.build[0]&&t<TL.slabs[0])ghost=.1;
+    else if(t>=TL.ans[0])ghost=1;
+  }
+  if(ghost>0)loft(g,-1,1,72,false,BLUE,ghost,false);
+  const bt=buildTo();
+  if(bt!==null&&bt>-1)loft(g,-1,bt,Math.max(1,Math.ceil(84*(bt+1)/2)),false,BLUE,1,false);
+  const N=curN();if(N)loft(g,-1,1,N,true,BLUE,1,N<=32);
+
+  // 例2：切断面の輪郭（固定の曲線）
+  if(!n3&&t>=TL.b[0]&&ghost>0){
+    curve3(g,f=>[Math.cos(PI*f),Math.sin(PI*f),Math.sin(PI*f)],60,'rgba(238,235,224,.8)',1.4);
+  }
+
+  // 例2：上の部分と平面
+  if(!n3&&t<TL.b[1]){
+    chunk(g,pb,1-pb);
+    const th=pa*PI/4,c=Math.cos(th),s=Math.sin(th),al=(1-pb);
+    if(pa>0||fresh){
+      const sh=[[-1.38,-.42*c,-.42*s],[1.38,-.42*c,-.42*s],[1.38,1.5*c,1.5*s],[-1.38,1.5*c,1.5*s]];
+      g.globalAlpha=al*.24;g.fillStyle=C.yellow;pathOf(g,sh,true);g.fill();
+      g.globalAlpha=al*.8;g.strokeStyle=C.yellow;g.lineWidth=1.3;g.stroke();g.globalAlpha=al;
+      curve3(g,f=>[Math.cos(PI*f),Math.sin(PI*f),Math.sin(PI*f)*Math.tan(th)],60,C.coral,2.4);
+      line3(g,[0,0,0],[0,1,0],C.chalk,1.2,[5,4]);
+      line3(g,[0,0,0],[0,c/Math.max(c,s),s/Math.max(c,s)],C.yellow,1.8);
+      curve3(g,f=>[0,.42*Math.cos(th*f),.42*Math.sin(th*f)],16,C.coral,2);
+      const q=pr([0,.66*Math.cos(th/2),.66*Math.sin(th/2)]);
+      if(th>.08)tx(g,Math.round(th*180/PI)+'°',q[0]+4,q[1],{size:17,c:C.coral,bold:1});
+      g.globalAlpha=1;
+    }
+    g.globalAlpha=1-pb;
+    line3(g,[-1,0,0],[-1,0,1],'rgba(238,235,224,.75)',1.2,[3,3]);
+    const m=pr([-1,0,.5]);tx(g,'r',m[0]-11,m[1],{it:1,size:17});
+    const m2=pr([-.5,0,0]);tx(g,'r',m2[0],m2[1]+13,{it:1,size:17});
+    g.globalAlpha=1;
+  }
+
+  // 通過の残像
+  if(t>=TL.sweep[0]+1.1&&t<TL.ret[0]&&manual===null){
+    for(let xi=-.9;xi<x-.02;xi+=.15){g.globalAlpha=.42;g.strokeStyle=C.coral;g.lineWidth=1;pathOf(g,secPts(xi,1),true);g.stroke()}
+    g.globalAlpha=1;
+  }
+
+  // 切り口
+  const rise=n3?ease(P('b')):1;
+  if(sA>0&&h>.002){
+    const pts=secPts(x,rise);
+    if(!n3||rise>0){
+      g.globalAlpha=sA*.9;g.fillStyle=C.coral;pathOf(g,pts,true);g.fill();
+      g.globalAlpha=sA;g.strokeStyle=C.chalk;g.lineWidth=1.3;g.stroke();
+    }
+    g.globalAlpha=sA;
+    g.lineCap='round';
+    if(!n3){
+      line3(g,pts[0],pts[1],C.yellow,3.4);
+      line3(g,pts[1],pts[2],C.purple,3.4);
+    }else{
+      line3(g,pts[0],pts[1],C.yellow,3.4);
+    }
+    g.lineCap='butt';
+    if(h>.12){
+      const lab=(p,s,dx,dy)=>{const q=pr(p);tx(g,s,q[0]+dx,q[1]+dy,{size:16,bold:1})};
+      if(!n3){lab(pts[0],'A',-3,14);lab(pts[1],'B',12,6);if(rise)lab(pts[2],'C',12,-6)}
+      else{lab([x,0,0],'M',-2,15);lab(pts[1],'P',12,0);lab(pts[0],'Q',-12,0)}
+    }
+    g.globalAlpha=1;
+  }
+
+  // x軸
+  const ax0=pr([-1.62,0,0]),ax1=pr([1.75,0,0]);
+  g.strokeStyle='rgba(238,235,224,.8)';g.lineWidth=1.4;g.beginPath();g.moveTo(ax0[0],ax0[1]);g.lineTo(ax1[0],ax1[1]);g.stroke();
+  const ang=Math.atan2(ax1[1]-ax0[1],ax1[0]-ax0[0]);
+  g.fillStyle='rgba(238,235,224,.9)';g.beginPath();g.moveTo(ax1[0],ax1[1]);
+  g.lineTo(ax1[0]-10*Math.cos(ang-.38),ax1[1]-10*Math.sin(ang-.38));g.lineTo(ax1[0]-10*Math.cos(ang+.38),ax1[1]-10*Math.sin(ang+.38));g.closePath();g.fill();
+  tx(g,'x',ax1[0]+4,ax1[1]+12,{it:1,size:16});
+  const o0=pr([0,0,0]);g.fillStyle=C.chalk;g.beginPath();g.arc(o0[0],o0[1],3,0,TAU);g.fill();
+  if(Math.abs(x)>.14||sA===0)tx(g,'O',o0[0]-11,o0[1]+11,{size:15,bold:1});
+
+  // 場面の見出し
+  let idx=0;STEP_START.forEach((s,i)=>{if(t>=s)idx=i});
+  tx(g,'①②③④⑤⑥'[idx]+' '+ex.steps[idx][0],10,18,{al:'left',size:Math.max(15,o.w/34),sans:true,bold:1,c:C.chalk});
+  if(N)tx(g,N+' 枚の板',o.w-12,18,{al:'right',size:Math.max(15,o.w/34),sans:true,bold:1,c:C.yellow});
+}
+
+function drawTop(){
+  const o=cTop,g=o.g,w=o.w,h=o.h;g.clearRect(0,0,w,h);
+  panelTitle(o,'真上から見る');
+  const R=Math.min(w*.4,(h-74)/2*.84),cx=w/2,cy=26+(h-74)/2+3,x=X(),hh=H(x),vis=secAlpha()>0;
+  // 領域
+  g.fillStyle='rgba(114,200,255,.16)';g.beginPath();
+  if(cur===2){g.arc(cx,cy,R,PI,TAU);g.closePath()}else g.arc(cx,cy,R,0,TAU);g.fill();
+  g.strokeStyle='rgba(238,235,224,.75)';g.lineWidth=1.4;g.beginPath();g.arc(cx,cy,R,0,TAU);g.stroke();
+  g.strokeStyle='rgba(238,235,224,.4)';g.lineWidth=1;g.beginPath();g.moveTo(cx-R*1.15,cy);g.lineTo(cx+R*1.18,cy);g.moveTo(cx,cy+R*1.08);g.lineTo(cx,cy-R*1.08);g.stroke();
+  tx(g,'x',cx+R*1.16,cy+11,{it:1,size:13,c:C.dim});tx(g,'y',cx+9,cy-R*1.06,{it:1,size:13,c:C.dim});
+  tx(g,'O',cx-9,cy+10,{size:13,bold:1});
+  const v=ex.v;
+  if(vis){
+    const mx=cx+x*R,by=cy-hh*R,qy=cy+hh*R,f1=t>=TL.f1[0];
+    if(f1){
+      g.fillStyle='rgba(255,208,100,.3)';g.beginPath();g.moveTo(cx,cy);g.lineTo(mx,cy);g.lineTo(mx,by);g.closePath();g.fill();
+      g.strokeStyle=C.chalk;g.setLineDash([4,3]);g.lineWidth=1.3;g.beginPath();g.moveTo(cx,cy);g.lineTo(mx,by);g.stroke();g.setLineDash([]);
+    }
+    g.strokeStyle=C.yellow;g.lineWidth=3;g.lineCap='round';g.beginPath();g.moveTo(mx,cur===2?cy:qy);g.lineTo(mx,by);g.stroke();g.lineCap='butt';
+    g.fillStyle=C.chalk;g.beginPath();g.arc(mx,cy,3.2,0,TAU);g.fill();
+    if(hh>.12){
+      if(cur===2){tx(g,'A',mx+9,cy+11,{size:14,bold:1});tx(g,'B',mx+9,by-7,{size:14,bold:1})}
+      else{tx(g,'M',mx+11,cy+11,{size:14,bold:1});tx(g,'P',mx+9,by-7,{size:14,bold:1});tx(g,'Q',mx+10,qy+4,{size:14,bold:1})}
+    }
+    if(f1&&Math.abs(x)>.2&&hh>.2){
+      tx(g,'x',(cx+mx)/2,cy-9,{it:1,size:14,c:C.yellow});
+      tx(g,v,(cx+mx)/2-(x>0?7:-7),(cy+by)/2-8,{it:1,size:15});
+    }
+    const seg=cur===2?'AB':'MP';
+    tx(g,f1?`x² + ${seg}² = ${v}²`:'　',w/2,h-37,{size:15,c:f1?C.yellow:C.dim});
+    tx(g,`x = ${fm(x)}${v},  ${seg} = ${fm(hh)}${v}`,w/2,h-16,{size:14});
+  }
+}
+
+function drawSec(){
+  const o=cSec,g=o.g,w=o.w,h=o.h;g.clearRect(0,0,w,h);
+  panelTitle(o,'切り口を正面から');
+  const x=X(),hh=H(x),vis=secAlpha()>0,v=ex.v,n3=cur===3,rise=n3?ease(P('b')):1;
+  const size=n3?2:1,avH=h-98;
+  const u=Math.min(w*.72/size,avH/size);
+  const base=h-64,cx=w/2;
+  const toX=y=>n3?cx+y*u:cx-.5*u+y*u, toY=z=>base-z*u;
+  const draw=(hv,k)=>{const p=ex.sec(hv,k);g.beginPath();p.forEach((q,i)=>{const a=toX(q[0]),b=toY(q[1]);i?g.lineTo(a,b):g.moveTo(a,b)});g.closePath()};
+  // 最大の切り口（x=0）
+  g.setLineDash([4,4]);g.strokeStyle='rgba(238,235,224,.3)';g.lineWidth=1.1;draw(1,1);g.stroke();g.setLineDash([]);
+  if(!vis)return;
+  const f3=t>=TL.f3[0];
+  g.fillStyle=f3?'rgba(255,132,102,.75)':'rgba(255,132,102,.45)';draw(hh,rise);g.fill();
+  g.lineCap='round';
+  if(!n3){
+    const ax=toX(0),bx=toX(hh),by=toY(0),cyy=toY(hh);
+    g.strokeStyle=C.chalk;g.lineWidth=1.3;g.beginPath();g.moveTo(ax,by);g.lineTo(bx,cyy);g.stroke();
+    g.strokeStyle=C.yellow;g.lineWidth=3;g.beginPath();g.moveTo(ax,by);g.lineTo(bx,by);g.stroke();
+    g.strokeStyle=C.purple;g.beginPath();g.moveTo(bx,by);g.lineTo(bx,cyy);g.stroke();
+    if(hh>.22){
+      const m=9;g.strokeStyle=C.chalk;g.lineWidth=1;g.beginPath();g.moveTo(bx-m,by);g.lineTo(bx-m,by-m);g.lineTo(bx,by-m);g.stroke();
+      const ar=Math.min(24,hh*u*.42);const on=t>=TL.f2[0];
+      g.strokeStyle=on?C.coral:C.chalk;g.lineWidth=on?2:1.2;g.beginPath();g.arc(ax,by,ar,-PI/4,0);g.stroke();
+      tx(g,'45°',ax+ar+15,by-ar*.42-3,{size:13,c:on?C.chalk:C.dim});
+      tx(g,'A',ax-9,by+9,{size:14,bold:1});tx(g,'B',bx+9,by+9,{size:14,bold:1});tx(g,'C',bx+9,cyy-5,{size:14,bold:1});
+    }
+    tx(g,`AB = BC = ${fm(hh)}${v}`,w/2,h-16-21,{size:14});
+  }else{
+    g.strokeStyle=C.chalk;g.lineWidth=1.3;draw(hh,rise);g.stroke();
+    g.strokeStyle=C.yellow;g.lineWidth=3;g.beginPath();g.moveTo(toX(-hh),toY(0));g.lineTo(toX(hh),toY(0));g.stroke();
+    if(hh>.16){tx(g,'Q',toX(-hh)-9,toY(0)+9,{size:14,bold:1});tx(g,'P',toX(hh)+9,toY(0)+9,{size:14,bold:1});tx(g,'M',cx,toY(0)+11,{size:14,bold:1})}
+    tx(g,`PQ = 2MP = ${fm(2*hh)}${v}`,w/2,h-16-21,{size:14});
+  }
+  g.lineCap='butt';
+  if(rise>0)tx(g,`S(x) = ${fm(ex.S(x))}${v}²`,w/2,h-16,{size:15,c:C.coral,bold:1});
+}
+
+function drawGr(){
+  const o=cGr,g=o.g,w=o.w,h=o.h;g.clearRect(0,0,w,h);
+  panelTitle(o,'切り口の面積 S(x) のグラフ');
+  const v=ex.v,l=38,r=14,tp=30,b=24,x0=l,x1=w-r,y0=h-b,y1=tp+6;
+  const sx=x=>lerp(x0,x1,(x+1)/2),sy=s=>lerp(y0,y1,s/ex.Smax);
+  // 軸
+  g.strokeStyle='rgba(238,235,224,.55)';g.lineWidth=1.2;g.beginPath();g.moveTo(x0,y0);g.lineTo(x1,y0);g.moveTo(sx(0),y0);g.lineTo(sx(0),y1-6);g.stroke();
+  tx(g,'−'+v,sx(-1),y0+13,{size:13,c:C.dim});tx(g,v,sx(1),y0+13,{size:13,c:C.dim});tx(g,'O',sx(0),y0+13,{size:13,c:C.dim});
+  tx(g,ex.SmaxL,sx(0)-24,y1+2,{size:14,c:C.dim});
+  const N=curN(),bt=buildTo(),ans=t>=TL.ans[0];
+  const area=(a,b)=>{g.beginPath();g.moveTo(sx(a),sy(0));for(let i=0;i<=80;i++){const u=lerp(a,b,i/80);g.lineTo(sx(u),sy(ex.S(u)))}g.lineTo(sx(b),sy(0));g.closePath();g.fill()};
+  g.fillStyle='rgba(255,132,102,.5)';
+  if(bt!==null&&bt>-1)area(-1,bt);
+  if(ans)area(-1,1);
+  if(N){
+    const d=2/N;g.strokeStyle='rgba(28,46,40,.7)';g.lineWidth=N<=32?1:.4;
+    for(let i=0;i<N;i++){const a=-1+i*d,m=a+d/2;g.fillRect(sx(a),sy(ex.S(m)),sx(a+d)-sx(a),sy(0)-sy(ex.S(m)));g.strokeRect(sx(a),sy(ex.S(m)),sx(a+d)-sx(a),sy(0)-sy(ex.S(m)))}
+  }
+  g.strokeStyle=C.coral;g.lineWidth=2.4;g.beginPath();for(let i=0;i<=120;i++){const u=-1+i/60;const a=sx(u),c=sy(ex.S(u));i?g.lineTo(a,c):g.moveTo(a,c)}g.stroke();
+  const x=X();
+  if(secAlpha()>0&&(cur===2||t>=TL.b[0])){
+    g.strokeStyle=C.yellow;g.lineWidth=1.4;g.setLineDash([4,3]);g.beginPath();g.moveTo(sx(x),y0);g.lineTo(sx(x),sy(ex.S(x)));g.stroke();g.setLineDash([]);
+    g.fillStyle=C.yellow;g.beginPath();g.arc(sx(x),sy(ex.S(x)),4.5,0,TAU);g.fill();
+  }
+  // 体積の表示
+  let msg='',col=C.chalk;
+  if(ans){msg=`V = ${ex.exactL} = ${ex.exact.toFixed(4)}${v}³`;col=C.yellow}
+  else if(N)msg=`${N} 枚の合計 ${riemann(N).toFixed(4)}${v}³`;
+  else if(bt!==null)msg=`ここまでの体積 ${ex.cum(Math.max(-1,bt)).toFixed(4)}${v}³`;
+  if(msg)tx(g,msg,w-10,13,{al:'right',size:Math.min(15,w/23),c:col,bold:1});
+}
+
+function drawAll(){draw3D();drawTop();drawSec();drawGr()}
+
+// ---- UI ----
+const stepsEl=$('steps'),eqEl=$('eq');
+function setExample(n,keepView){
+  cur=n;ex=EX[n];
+  $('tab2').classList.toggle('on',n===2);$('tab3').classList.toggle('on',n===3);
+  $('prob').textContent=ex.prob;
+  stepsEl.innerHTML=ex.steps.map((s,i)=>`<li><button type="button" data-i="${i}"><b>${s[0]}</b>${s[1]}</button></li>`).join('');
+  eqEl.innerHTML=ex.eq.map(l=>`<div class="ln" data-k="${l[1]}"><span>${l[0]}</span></div>`).join('');
+  t=T0;fresh=true;playing=false;manual=null;
+  if(!keepView){yaw=VIEW.yaw;pitch=VIEW.pitch}
+  try{history.replaceState(null,'','#rei'+n)}catch(e){}
+  resize();updateUI();
+}
+function updateUI(){
+  let s=0;STEP_START.forEach((a,i)=>{if(t>=a)s=i});
+  [...stepsEl.children].forEach((el,i)=>{el.classList.toggle('on',!fresh&&i===s);el.classList.toggle('done',!fresh&&i<s)});
+  eqEl.querySelectorAll('.ln').forEach(el=>el.classList.toggle('show',!fresh&&reached(el.dataset.k)));
+  $('capt').textContent=fresh?'「スタート」で最初から再生します。':ex.steps[s][1];
+  $('scrub').value=t/T_END;
+  const x=X();$('xs').value=x;$('xv').textContent='x = '+fm(x)+ex.v;
+  $('pTop').classList.toggle('on',t>=TL.f1[0]&&t<TL.f2[0]);
+  $('pSec').classList.toggle('on',t>=TL.f2[0]&&t<TL.build[0]);
+  $('pGr').classList.toggle('on',t>=TL.build[0]);
+  $('play').textContent=playing?'❚❚ 一時停止':(t>=T_END?'↺ もう一度':(fresh?'▶ スタート':'▶ 再開'));
+}
+function loop(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(playing){
+    const prev=t;t+=dt*speed;
+    if($('stopEach').checked){for(const b of STEP_START){if(b>0&&prev<b&&t>=b){t=b;playing=false;break}}}
+    if(t>=T_END){t=T_END;playing=false}
+    drawAll();updateUI();
+  }
+  requestAnimationFrame(loop);
+}
+$('play').addEventListener('click',()=>{
+  if(playing)playing=false;
+  else{if(fresh||t>=T_END)t=0;fresh=false;manual=null;playing=true}
+  drawAll();updateUI();
+});
+$('scrub').addEventListener('input',e=>{playing=false;fresh=false;manual=null;t=parseFloat(e.target.value)*T_END;drawAll();updateUI()});
+$('xs').addEventListener('input',e=>{
+  playing=false;fresh=false;manual=parseFloat(e.target.value);
+  if(t<TL.ret[1])t=TL.ret[1];
+  if(t>=TL.slabs[0])t=TL.build[1]-.001;
+  drawAll();updateUI();
+});
+$('tab2').addEventListener('click',()=>setExample(2));
+$('tab3').addEventListener('click',()=>setExample(3));
+$('resetView').addEventListener('click',()=>{yaw=VIEW.yaw;pitch=VIEW.pitch;drawAll()});
+stepsEl.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  t=STEP_START[+b.dataset.i];fresh=false;manual=null;playing=true;drawAll();updateUI();
+});
+document.querySelectorAll('.speed button').forEach(b=>b.addEventListener('click',()=>{
+  speed=parseFloat(b.dataset.s);document.querySelectorAll('.speed button').forEach(a=>a.classList.toggle('on',a===b));
+}));
+// ドラッグで回転
+let drag=null;
+c3.c.addEventListener('pointerdown',e=>{drag=[e.clientX,e.clientY];try{c3.c.setPointerCapture(e.pointerId)}catch(_){}});
+c3.c.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  yaw-=(e.clientX-drag[0])*.008;pitch=clamp(pitch+(e.clientY-drag[1])*.006,-.05,1.35);
+  drag=[e.clientX,e.clientY];drawAll();
+});
+const endDrag=()=>{drag=null};
+c3.c.addEventListener('pointerup',endDrag);c3.c.addEventListener('pointercancel',endDrag);
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&e.target.tagName!=='BUTTON'&&e.target.tagName!=='INPUT'){e.preventDefault();$('play').click()}});
+window.addEventListener('resize',resize);
+
+setExample(location.hash==='#rei3'?3:2);
+requestAnimationFrame(n=>{last=n;loop(n)});
+})();
+</script>
+
+</html>
