@@ -12,7 +12,7 @@
   {
    "id": "galton",
    "title": "ガルトンボード：二項分布から正規分布へ",
-   "folder": "確率・統計",
+   "folder": "コラム",
    "file": "materials/galton.html",
    "added": "2026-11-09"
   },
@@ -26,21 +26,21 @@
   {
    "id": "sanhei",
    "title": "三平方の定理を目で見る",
-   "folder": "図形",
+   "folder": "コラム",
    "file": "materials/sanhei.html",
    "added": "2026-11-09"
   },
   {
    "id": "cube-cut",
    "title": "立方体の切断シミュレーター",
-   "folder": "図形",
+   "folder": "コラム",
    "file": "materials/cube-cut.html",
    "added": "2026-11-09"
   },
   {
    "id": "cubes-sum",
    "title": "立方数の和は、和の2乗",
-   "folder": "数列",
+   "folder": "コラム",
    "file": "materials/cubes-sum.html",
    "added": "2026-11-09"
   },
