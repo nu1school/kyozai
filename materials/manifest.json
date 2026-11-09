@@ -8,6 +8,62 @@
    "folder": "理系数学演習/積分の応用",
    "file": "materials/no12-rittai.html",
    "added": "2026-11-09"
+  },
+  {
+   "id": "galton",
+   "title": "ガルトンボード：二項分布から正規分布へ",
+   "folder": "確率・統計",
+   "file": "materials/galton.html",
+   "added": "2026-11-09"
+  },
+  {
+   "id": "cycloid",
+   "title": "サイクロイドの面積は円の3倍",
+   "folder": "理系数学Ⅲ/積分の応用",
+   "file": "materials/cycloid.html",
+   "added": "2026-11-09"
+  },
+  {
+   "id": "sanhei",
+   "title": "三平方の定理を目で見る",
+   "folder": "図形",
+   "file": "materials/sanhei.html",
+   "added": "2026-11-09"
+  },
+  {
+   "id": "cube-cut",
+   "title": "立方体の切断シミュレーター",
+   "folder": "図形",
+   "file": "materials/cube-cut.html",
+   "added": "2026-11-09"
+  },
+  {
+   "id": "cubes-sum",
+   "title": "立方数の和は、和の2乗",
+   "folder": "数列",
+   "file": "materials/cubes-sum.html",
+   "added": "2026-11-09"
+  },
+  {
+   "id": "rot-abc-z",
+   "title": "△ABC を z 軸のまわりに回す",
+   "folder": "理系数学Ⅲ/積分の応用",
+   "file": "materials/rot-abc-z.html",
+   "added": "2026-11-09"
+  },
+  {
+   "id": "rot-line-l",
+   "title": "直線 ℓ のまわりの回転体",
+   "folder": "理系数学Ⅲ/積分の応用",
+   "file": "materials/rot-line-l.html",
+   "added": "2026-11-09"
+  },
+  {
+   "id": "rot-line-yx",
+   "title": "直線 y=x のまわりの回転体",
+   "folder": "理系数学Ⅲ/積分の応用",
+   "file": "materials/rot-line-yx.html",
+   "added": "2026-11-09"
   }
  ]
 }

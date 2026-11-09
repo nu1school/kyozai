@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>立方体の切断シミュレーター</title>
+<style>
+:root{
+  --board:#1c2e28; --board2:#233a33; --frame:#6b4f35;
+  --chalk:#eeebe0; --dim:#9fb1a8; --yellow:#ffd064;
+  --p:#ff8466; --q:#72c8ff; --r:#8fe3a0;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#2b2520;color:var(--chalk);
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;}
+.page{max-width:1180px;margin:0 auto;padding:22px 18px 40px}
+h1{font-family:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP",serif;
+  font-weight:600;font-size:clamp(22px,3.2vw,34px);letter-spacing:.04em;margin:4px 0 4px}
+.sub{color:#cdbfa9;margin:0 0 16px;font-size:15px;line-height:1.7}
+.main{display:grid;grid-template-columns:1.55fr 1fr;gap:20px}
+@media (max-width:900px){.main{grid-template-columns:1fr}}
+.board{background:radial-gradient(ellipse at 45% 35%,var(--board2),var(--board) 70%);
+  border:12px solid var(--frame);border-radius:6px;
+  box-shadow:inset 0 0 60px rgba(0,0,0,.45),0 10px 30px rgba(0,0,0,.4);padding:10px 12px 10px}
+#wrap{width:100%;position:relative}
+canvas{display:block;width:100%;touch-action:none;cursor:grab}
+canvas.dragging{cursor:grabbing}
+.hint{font-size:12.5px;color:var(--dim);padding:4px 4px 0;line-height:1.6}
+.tray{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:12px 4px 4px;
+  border-top:1px dashed rgba(238,235,224,.18);margin-top:8px}
+#play{font:inherit;font-size:17px;font-weight:700;color:#1c2e28;background:var(--chalk);
+  border:none;border-radius:999px;padding:11px 26px;cursor:pointer;min-width:150px;box-shadow:0 3px 0 #b9b4a4}
+#play:active{transform:translateY(2px);box-shadow:0 1px 0 #b9b4a4}
+#play:disabled{opacity:.4;cursor:not-allowed}
+.sec{font:inherit;font-size:14px;color:var(--chalk);background:transparent;border:1px solid rgba(238,235,224,.35);
+  border-radius:999px;padding:8px 16px;cursor:pointer}
+.sec:hover{background:rgba(238,235,224,.08)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+.ctl{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--dim)}
+.seg button{font:inherit;font-size:13px;background:transparent;color:var(--dim);
+  border:1px solid rgba(238,235,224,.3);border-left-width:0;padding:5px 11px;cursor:pointer}
+.seg button:first-child{border-left-width:1px;border-radius:6px 0 0 6px}
+.seg button:last-child{border-radius:0 6px 6px 0}
+.seg button.on{background:rgba(238,235,224,.16);color:var(--chalk)}
+.card{background:var(--board);border:1px solid #3d5048;border-radius:6px;padding:16px 18px;margin-bottom:16px}
+.card h2{font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-weight:600;font-size:17px;margin:0 0 10px}
+.slot{display:grid;grid-template-columns:34px 1fr;gap:4px 10px;align-items:center;padding:9px 10px;border-radius:6px;
+  border:1px solid transparent;cursor:pointer;margin-bottom:6px}
+.slot.on{border-color:rgba(255,208,100,.6);background:rgba(255,208,100,.06)}
+.slot .nm{grid-row:span 2;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:"Times New Roman",serif;font-size:19px;font-style:italic;color:#1c2e28;font-weight:700}
+.slot .line{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.slot select{font:inherit;font-size:14px;background:rgba(0,0,0,.25);color:var(--chalk);border:1px solid rgba(238,235,224,.3);
+  border-radius:6px;padding:4px 6px}
+.slot input[type=range]{flex:1;min-width:110px;accent-color:var(--yellow)}
+.slot .ratio{font-family:"Times New Roman","Hiragino Mincho ProN",serif;font-size:15px;color:#e6dcc9}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{font:inherit;font-size:13px;color:var(--chalk);background:rgba(238,235,224,.06);border:1px solid rgba(238,235,224,.22);
+  border-radius:6px;padding:5px 10px;cursor:pointer}
+.presets button:hover{background:rgba(238,235,224,.14)}
+.shape{font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-size:28px;font-weight:600;color:var(--yellow);margin:2px 0 6px}
+.err{color:#ffb3a1;font-size:14px;line-height:1.7}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+td{padding:5px 4px;border-bottom:1px solid rgba(238,235,224,.1);font-size:14.5px}
+td:first-child{font-family:"Times New Roman",serif;font-style:italic;color:var(--dim);width:4.5em}
+td .ex{font-family:"Times New Roman","Hiragino Mincho ProN",serif;font-size:16px}
+td .ap{color:var(--dim);font-size:12.5px;margin-left:6px}
+.note{font-size:12.5px;color:var(--dim);margin:8px 0 0;line-height:1.7}
+.order{font-family:"Times New Roman",serif;font-style:italic;font-size:16px;color:#e6dcc9;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>立方体の切断シミュレーター</h1>
+  <p class="sub">立方体の辺の上に3点 P, Q, R を置くと、その3点を通る平面で立方体を切ったときの切り口を調べられます。「切る」を押すと、切り口の作図から切断、断面を真正面から見るところまで順に動きます。</p>
+
+  <div class="main">
+    <div>
+      <div class="board">
+        <div id="wrap"><canvas id="cv" aria-label="立方体と切断面の3D表示"></canvas></div>
+        <div class="hint">ドラッグで回転　／　辺をクリックすると選択中の点をそこに置く　／　点をドラッグすると辺にそって動く</div>
+        <div class="tray">
+          <button id="play" type="button">✂ 切る</button>
+          <button id="back" class="sec" type="button">切る前に戻す</button>
+          <button id="view" class="sec" type="button">視点を戻す</button>
+          <div class="ctl">速さ
+            <div class="seg" role="group" aria-label="再生速度" id="speeds">
+              <button type="button" data-s="0.5">ゆっくり</button><button type="button" data-s="1" class="on">ふつう</button><button type="button" data-s="2">はやい</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>3点の位置</h2>
+        <div id="slots"></div>
+        <p class="note">比は12等分の目盛りで動きます（1/2, 1/3, 1/4, 1/6 に対応）。</p>
+      </div>
+      <div class="card">
+        <h2>よく出る切り口</h2>
+        <div class="presets" id="presets"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:4px">
+    <h2>切り口</h2>
+    <div id="info"></div>
+    <p class="note">立方体の1辺の長さを1としています。立方体 ABCD-EFGH は上の面が ABCD、下の面が EFGH で、A の真下が E です。</p>
+  </div>
+</div>
+<script>
+// ===== 立方体の切断：計算部分（DOMなし） =====
+const VN=["A","B","C","D","E","F","G","H"];
+const V=[[0,0,1],[1,0,1],[1,1,1],[0,1,1],[0,0,0],[1,0,0],[1,1,0],[0,1,0]];
+const EDGES=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+const FACES=[[0,1,2,3],[4,5,6,7],[0,1,5,4],[3,2,6,7],[0,3,7,4],[1,2,6,5]];
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+const add=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]];
+const mul=(a,s)=>[a[0]*s,a[1]*s,a[2]*s];
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const norm=a=>Math.hypot(a[0],a[1],a[2]);
+const unit=a=>{const l=norm(a);return l?mul(a,1/l):a};
+const EPS=1e-9;
+function edgePoint(e,t){const [i,j]=EDGES[e];return add(V[i],mul(sub(V[j],V[i]),t))}
+
+function section(pts){
+  const [P,Q,R]=pts;
+  let n=cross(sub(Q,P),sub(R,P));
+  if(norm(n)<1e-9)return{err:"3点が一直線上にあるか、同じ点があります。平面が1つに決まりません。"};
+  n=unit(n);
+  if(n[2]<-1e-9||(Math.abs(n[2])<1e-9&&(n[1]>1e-9||(Math.abs(n[1])<1e-9&&n[0]<0))))n=mul(n,-1);
+  const d=p=>dot(n,sub(p,P));
+  const out=[];
+  const push=p=>{if(!out.some(q=>norm(sub(p,q))<1e-7))out.push(p)};
+  for(const [i,j] of EDGES){
+    const a=d(V[i]),b=d(V[j]);
+    if(Math.abs(a)<EPS)push(V[i]);
+    if(Math.abs(b)<EPS)push(V[j]);
+    if((a>EPS&&b<-EPS)||(a<-EPS&&b>EPS)){const s=a/(a-b);push(add(V[i],mul(sub(V[j],V[i]),s)))}
+  }
+  if(out.length<3)return{err:"平面が立方体の内部を通りません。"};
+  const c=mul(out.reduce(add,[0,0,0]),1/out.length);
+  let u=unit(sub(out[0],c)),w=cross(n,u);
+  out.sort((p,q)=>Math.atan2(dot(sub(p,c),w),dot(sub(p,c),u))-Math.atan2(dot(sub(q,c),w),dot(sub(q,c),u)));
+  const vd=V.map(d);
+  const pos=vd.some(x=>x>EPS),neg=vd.some(x=>x<-EPS);
+  return{n,P,poly:out,c,faceOnly:!(pos&&neg)};
+}
+// 半空間 sgn*d>=0 で多角形を切る
+function clip(poly,n,P,sgn){
+  const d=p=>sgn*dot(n,sub(p,P));const res=[];
+  for(let i=0;i<poly.length;i++){
+    const a=poly[i],b=poly[(i+1)%poly.length],da=d(a),db=d(b);
+    if(da>=-EPS)res.push(a);
+    if((da>EPS&&db<-EPS)||(da<-EPS&&db>EPS)){res.push(add(a,mul(sub(b,a),da/(da-db))))}
+  }
+  return res;
+}
+function piece(sec,sgn){
+  const faces=[];
+  for(const f of FACES){
+    const pl=clip(f.map(i=>V[i]),sec.n,sec.P,sgn);
+    if(pl.length>=3&&polyArea(pl)>1e-9)faces.push({pts:pl,cap:false});
+  }
+  faces.push({pts:sec.poly.slice(),cap:true});
+  const allp=faces.flatMap(f=>f.pts);const cen=mul(allp.reduce(add,[0,0,0]),1/allp.length);
+  for(const f of faces){
+    let nn=newell(f.pts);const fc=mul(f.pts.reduce(add,[0,0,0]),1/f.pts.length);
+    if(dot(nn,sub(fc,cen))<0)nn=mul(nn,-1);f.n=unit(nn);f.c=fc;
+  }
+  return{faces,cen};
+}
+function newell(p){let n=[0,0,0];for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];n=add(n,cross(a,b))}return n}
+function polyArea(p){return norm(newell(p))/2}
+
+// --- 厳密な表示（分数・根号） ---
+function gcd(a,b){a=a<0n?-a:a;b=b<0n?-b:b;while(b){[a,b]=[b,a%b]}return a}
+function toFrac(x){
+  let h0=0n,h1=1n,k0=1n,k1=0n,y=x;
+  for(let i=0;i<40;i++){
+    const a=Math.floor(y+1e-12);const A=BigInt(a);
+    const h2=A*h1+h0,k2=A*k1+k0;
+    if(k2>100000n)break;
+    h0=h1;h1=h2;k0=k1;k1=k2;
+    if(Math.abs(Number(h1)/Number(k1)-x)<1e-11)break;
+    const r=y-a;if(Math.abs(r)<1e-12)break;y=1/r;
+  }
+  return[h1,k1];
+}
+const F=(n,d)=>{if(d<0n){n=-n;d=-d}const g=gcd(n,d)||1n;return[n/g,d/g]};
+const fadd=(a,b)=>F(a[0]*b[1]+b[0]*a[1],a[1]*b[1]);
+const fsub=(a,b)=>F(a[0]*b[1]-b[0]*a[1],a[1]*b[1]);
+const fmul=(a,b)=>F(a[0]*b[0],a[1]*b[1]);
+function surd(fr){ // √(p/q) を文字列に
+  const [p,q]=fr;if(p===0n)return"0";
+  let N=p*q,k=1n;
+  if(N>10n**15n)return null;
+  let n=Number(N),kk=1;
+  for(let i=2;i*i<=n;i++){while(n%(i*i)===0){n/=i*i;kk*=i}}
+  k=BigInt(kk);let den=q;const g=gcd(k,den);k/=g;den/=g;
+  const root=n===1?"":`√${n}`;
+  let num=(k===1n&&root)?root:`${k}${root}`;
+  return den===1n?num:`${num}/${den}`;
+}
+function exactLen(a,b){
+  const fa=a.map(toFrac),fb=b.map(toFrac);
+  let s=[0n,1n];for(let i=0;i<3;i++){const d=fsub(fb[i],fa[i]);s=fadd(s,fmul(d,d))}
+  return surd(s);
+}
+function exactArea(poly){
+  const fp=poly.map(p=>p.map(toFrac));let S=[[0n,1n],[0n,1n],[0n,1n]];
+  for(let i=0;i<fp.length;i++){const a=fp[i],b=fp[(i+1)%fp.length];
+    const c=[fsub(fmul(a[1],b[2]),fmul(a[2],b[1])),fsub(fmul(a[2],b[0]),fmul(a[0],b[2])),fsub(fmul(a[0],b[1]),fmul(a[1],b[0]))];
+    S=S.map((x,j)=>fadd(x,c[j]))}
+  let s=[0n,1n];for(const x of S)s=fadd(s,fmul(x,x));
+  return surd(fmul(s,[1n,4n]));
+}
+function classify(poly){
+  const k=poly.length,L=[],E=[];
+  for(let i=0;i<k;i++){const e=sub(poly[(i+1)%k],poly[i]);E.push(e);L.push(norm(e))}
+  const eq=(a,b)=>Math.abs(a-b)<1e-6;
+  const allEq=L.every(x=>eq(x,L[0]));
+  const ang=i=>{const a=mul(E[(i+k-1)%k],-1),b=E[i];return Math.acos(Math.max(-1,Math.min(1,dot(a,b)/(norm(a)*norm(b)))))};
+  const par=(a,b)=>norm(cross(a,b))<1e-6*norm(a)*norm(b);
+  if(k===3){
+    if(allEq)return"正三角形";
+    if(eq(L[0],L[1])||eq(L[1],L[2])||eq(L[0],L[2]))return"二等辺三角形";
+    const A=[0,1,2].map(ang);if(A.some(x=>Math.abs(x-Math.PI/2)<1e-6))return"直角三角形";
+    return"三角形";
+  }
+  if(k===4){
+    const p1=par(E[0],E[2]),p2=par(E[1],E[3]);
+    const right=Math.abs(dot(E[0],E[1]))<1e-6;
+    if(p1&&p2){if(allEq&&right)return"正方形";if(right)return"長方形";if(allEq)return"ひし形";return"平行四辺形"}
+    if(p1||p2){const legs=p1?[L[1],L[3]]:[L[0],L[2]];return eq(legs[0],legs[1])?"等脚台形":"台形"}
+    return"四角形";
+  }
+  if(k===5)return"五角形";
+  if(k===6){const A=[...Array(6).keys()].map(ang);if(allEq&&A.every(x=>eq(x,A[0])))return"正六角形";return"六角形"}
+  return`${k}角形`;
+}
+
+// ===== 描画とUI =====
+(function(){
+const EN=EDGES.map(([i,j])=>VN[i]+VN[j]);
+const FN=[[0,0,1],[0,0,-1],[0,-1,0],[0,1,0],[-1,0,0],[1,0,0]];
+const SLOT_COL=["#ff8466","#72c8ff","#8fe3a0"],SLOT_NM=["P","Q","R"],EXTRA=["S","T","U","V"];
+const CH="#eeebe0",YEL="#ffd064",CAP="#ff8466";
+const PRESETS=[
+  ["正三角形",[["AB",6],["DA",6],["AE",6]]],
+  ["二等辺三角形",[["AB",6],["DA",6],["AE",12]]],
+  ["正方形",[["AE",6],["BF",6],["CG",6]]],
+  ["長方形",[["AB",0],["BC",0],["CG",12]]],
+  ["ひし形",[["AB",0],["BF",6],["DH",6]]],
+  ["平行四辺形",[["AB",0],["BF",4],["DH",8]]],
+  ["等脚台形",[["AB",6],["BC",6],["HE",12]]],
+  ["五角形",[["AB",6],["DA",6],["CG",6]]],
+  ["正六角形",[["AB",6],["CG",6],["HE",6]]]
+];
+const DEF_YAW=-1.2,DEF_PITCH=0.42;
+
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),wrap=document.getElementById('wrap');
+const btn=document.getElementById('play'),infoEl=document.getElementById('info');
+let W,H,dpr=1,SC=100,CX=0,CY=0;
+let yaw=DEF_YAW,pitch=DEF_PITCH;
+let slots=[{e:0,t:6},{e:3,t:6},{e:10,t:6}],active=0;
+let sec=null,pieces=null,names=[],TL=null,T_END=1;
+let t=0,playing=false,speed=1,last=0,camFrom=null,userCam=false,camBefore=null;
+
+// ---------- カメラ ----------
+function cam(){
+  const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+  return{d:[cp*cy,cp*sy,sp],r:[-sy,cy,0],u:[-sp*cy,-sp*sy,cp]};
+}
+let CAM=cam();
+function pr(p){const v=[p[0]-.5,p[1]-.5,p[2]-.5];return[CX+dot(v,CAM.r)*SC,CY-dot(v,CAM.u)*SC,dot(v,CAM.d)]}
+
+function resize(){
+  dpr=window.devicePixelRatio||1;W=wrap.clientWidth;H=Math.max(320,Math.min(640,W*0.8,(window.innerHeight-(wrap.getBoundingClientRect().top+window.scrollY)-((document.querySelector('.tray')||{}).offsetHeight||0)-44)));
+  cv.style.height=H+'px';cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
+  SC=Math.min(W,H)*0.36;CX=W/2;CY=H/2;draw();
+}
+
+// ---------- 計算の更新 ----------
+function slotPoint(s){return edgePoint(s.e,s.t/12)}
+function recompute(){
+  sec=section(slots.map(slotPoint));
+  pieces=null;names=[];
+  if(!sec.err){
+    const P=slots.map(slotPoint);
+    let start=0;
+    sec.poly.forEach((q,i)=>{if(norm(sub(q,P[0]))<1e-7)start=i});
+    sec.poly=sec.poly.slice(start).concat(sec.poly.slice(0,start));
+    let ex=0;
+    names=sec.poly.map(q=>{for(let k=0;k<3;k++)if(norm(sub(q,P[k]))<1e-7)return SLOT_NM[k];return EXTRA[ex++]});
+    if(!sec.faceOnly)pieces=[piece(sec,1),piece(sec,-1)];
+    const k=sec.poly.length;
+    const a=0.9,b=a+0.5*k+0.3,c=b+0.6,d=c+0.3,e=d+1.2,f=e+0.3,g=f+1.7;
+    TL={plane:[0,a],cons:[a,b],fill:[b,c],sep:[d,e],view:[f,g]};T_END=sec.faceOnly?c+0.3:g+0.2;
+  }
+  t=0;playing=false;userCam=false;camFrom=null;
+  btn.disabled=!!sec.err;
+  renderInfo();renderSlots();draw();updateBtn();
+}
+
+// ---------- 情報パネル ----------
+function renderInfo(){
+  if(sec.err){infoEl.innerHTML=`<div class="err">${sec.err}</div>`;return}
+  const k=sec.poly.length,shape=classify(sec.poly);
+  let rows="";
+  for(let i=0;i<k;i++){
+    const a=sec.poly[i],b=sec.poly[(i+1)%k],ex=exactLen(a,b),ap=norm(sub(a,b));
+    rows+=`<tr><td>${names[i]}${names[(i+1)%k]}</td><td><span class="ex">${ex??ap.toFixed(4)}</span>${ex&&!/^\d+$/.test(ex)?`<span class="ap">≈ ${ap.toFixed(3)}</span>`:""}</td></tr>`;
+  }
+  const ar=exactArea(sec.poly),apA=polyArea(sec.poly);
+  rows+=`<tr><td style="font-style:normal">面積</td><td><span class="ex">${ar??apA.toFixed(4)}</span>${ar&&!/^\d+$/.test(ar)?`<span class="ap">≈ ${apA.toFixed(3)}</span>`:""}</td></tr>`;
+  const extra=names.map((nm,i)=>EXTRA.includes(nm)?`${nm}：${where(sec.poly[i])}`:"").filter(Boolean).join("　");
+  infoEl.innerHTML=`<div class="shape">${shape}</div>
+    <div class="order">${names.join(" → ")} → ${names[0]}</div>
+    ${sec.faceOnly?'<div class="err">3点が立方体の1つの面の上にあるので、切り口はその面そのものです。</div>':""}
+    ${extra?`<p class="note" style="margin:0 0 8px">${extra}</p>`:""}
+    <table>${rows}</table>`;
+}
+function where(p){
+  for(let i=0;i<8;i++)if(norm(sub(p,V[i]))<1e-7)return`頂点${VN[i]}`;
+  for(let e=0;e<12;e++){
+    const [i,j]=EDGES[e],a=V[i],b=V[j],ab=sub(b,a),s=dot(sub(p,a),ab);
+    if(s>-1e-9&&s<1+1e-9&&norm(sub(p,add(a,mul(ab,s))))<1e-7){
+      const [fn,fd]=toFrac(s);const num=Number(fn),den=Number(fd);
+      return`辺${EN[e]}上（${VN[i]}から${VN[j]}へ ${num}/${den}）`;
+    }
+  }
+  return"";
+}
+function ratioText(s,k){
+  const [i,j]=EDGES[s.e],X=VN[i],Y=VN[j],nm=SLOT_NM[k];
+  if(s.t===0)return`${nm} は頂点 ${X}`;
+  if(s.t===12)return`${nm} は頂点 ${Y}`;
+  let a=s.t,b=12-s.t;const g=(x,y)=>y?g(y,x%y):x;const gg=g(a,b);
+  return`${X}${nm} : ${nm}${Y} = ${a/gg} : ${b/gg}`;
+}
+function renderSlots(){
+  const box=document.getElementById('slots');
+  if(!box.children.length){
+    slots.forEach((s,k)=>{
+      const d=document.createElement('div');d.className='slot';
+      d.innerHTML=`<div class="nm" style="background:${SLOT_COL[k]}">${SLOT_NM[k]}</div>
+        <div class="line"><label>辺 <select aria-label="点${SLOT_NM[k]}の辺">${EN.map((n,i)=>`<option value="${i}">${n}</option>`).join("")}</select></label>
+        <input type="range" min="0" max="12" step="1" aria-label="点${SLOT_NM[k]}の位置"></div>
+        <div class="ratio"></div>`;
+      d.addEventListener('pointerdown',()=>{active=k;renderSlots();draw()});
+      d.querySelector('select').addEventListener('change',e=>{slots[k].e=+e.target.value;recompute()});
+      d.querySelector('input').addEventListener('input',e=>{slots[k].t=+e.target.value;recompute()});
+      box.appendChild(d);
+    });
+  }
+  [...box.children].forEach((d,k)=>{
+    d.classList.toggle('on',k===active);
+    d.querySelector('select').value=slots[k].e;
+    d.querySelector('input').value=slots[k].t;
+    d.querySelector('.ratio').textContent=ratioText(slots[k],k);
+  });
+}
+const pbox=document.getElementById('presets');
+PRESETS.forEach(([nm,arr])=>{
+  const b=document.createElement('button');b.type='button';b.textContent=nm;
+  b.addEventListener('click',()=>{slots=arr.map(([e,t])=>({e:EN.indexOf(e),t}));recompute()});
+  pbox.appendChild(b);
+});
+
+// ---------- 描画 ----------
+const clamp=x=>Math.max(0,Math.min(1,x));
+const ease=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const ph=k=>TL?clamp((t-TL[k][0])/(TL[k][1]-TL[k][0])):0;
+function line(a,b,col,w,dash){ctx.strokeStyle=col;ctx.lineWidth=w;ctx.setLineDash(dash||[]);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();ctx.setLineDash([])}
+function polyPath(ps){ctx.beginPath();ps.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath()}
+function label(str,p,col,size,italic){
+  ctx.font=`${italic===false?"":"italic "}${size}px "Times New Roman","Hiragino Mincho ProN",serif`;
+  ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.lineWidth=4;ctx.strokeStyle="rgba(28,46,40,.85)";ctx.strokeText(str,p[0],p[1]);
+  ctx.fillStyle=col;ctx.fillText(str,p[0],p[1]);
+}
+function faceFront(fi){return dot(FN[fi],CAM.d)>1e-6}
+function segFaces(a,b){
+  const res=[];const map={"2,1":0,"2,0":1,"1,0":2,"1,1":3,"0,0":4,"0,1":5};
+  for(let ax=0;ax<3;ax++)for(const v of [0,1])if(Math.abs(a[ax]-v)<1e-7&&Math.abs(b[ax]-v)<1e-7)res.push(map[ax+","+v]);
+  return res;
+}
+function shadeCol(r,g,b,f){return`rgb(${Math.round(r*f)},${Math.round(g*f)},${Math.round(b*f)})`}
+
+function draw(){
+  CAM=cam();
+  ctx.clearRect(0,0,W,H);
+  const fs=Math.max(13,Math.min(20,SC*0.1));
+  const pSep=sec&&!sec.err&&pieces?ease(ph('sep')):0;
+  if(pSep>0)drawSplit(pSep,fs);else drawWhole(fs);
+}
+
+function drawWhole(fs){
+  const PV=V.map(pr);
+  // 面
+  FACES.forEach((f,fi)=>{if(faceFront(fi)){ctx.fillStyle="rgba(238,235,224,.05)";polyPath(f.map(i=>PV[i]));ctx.fill()}});
+  // 奥の辺
+  const vis=EDGES.map(([i,j])=>FACES.some((f,fi)=>f.includes(i)&&f.includes(j)&&faceFront(fi)));
+  EDGES.forEach(([i,j],e)=>{if(!vis[e])line(PV[i],PV[j],"rgba(238,235,224,.4)",1.3,[6,5])});
+
+  const ok=sec&&!sec.err;
+  const pPlane=ok?ph('plane'):0,pCons=ok?ph('cons'):0,pFill=ok?ph('fill'):0;
+  if(ok){
+    const k=sec.poly.length,PP=sec.poly.map(pr);
+    // 切り口の塗り
+    ctx.fillStyle=`rgba(255,132,102,${(t>0?0:0.12)+0.5*pFill})`;polyPath(PP);ctx.fill();
+    // 平面
+    if(pPlane>0){
+      const u=unit(sub(sec.poly[0],sec.c)),w=cross(sec.n,u),s=1.15;
+      const q=[[1,1],[-1,1],[-1,-1],[1,-1]].map(([a,b])=>pr(add(sec.c,add(mul(u,a*s),mul(w,b*s)))));
+      ctx.globalAlpha=pPlane*(1-0.5*pFill);
+      ctx.fillStyle="rgba(255,208,100,.13)";polyPath(q);ctx.fill();
+      ctx.strokeStyle="rgba(255,208,100,.55)";ctx.lineWidth=1.2;ctx.stroke();ctx.globalAlpha=1;
+    }
+    // 切り口の辺（作図のように1本ずつ）
+    for(let i=0;i<k;i++){
+      const a=sec.poly[i],b=sec.poly[(i+1)%k];
+      const fcs=segFaces(a,b),front=fcs.some(faceFront);
+      const prog=t>0?clamp(pCons*k-i):1;
+      const col=t>0?CAP:"rgba(255,132,102,.7)";
+      if(prog<=0)continue;
+      const A=pr(a),B=pr(add(a,mul(sub(b,a),prog)));
+      line(A,B,col,t>0?2.6:1.8,front?[]:[6,5]);
+    }
+  }
+  // 手前の辺
+  EDGES.forEach(([i,j],e)=>{if(vis[e])line(PV[i],PV[j],CH,2)});
+  // 頂点名
+  const C=pr([.5,.5,.5]);
+  V.forEach((v,i)=>{const p=PV[i],dx=p[0]-C[0],dy=p[1]-C[1],l=Math.hypot(dx,dy)||1;label(VN[i],[p[0]+dx/l*fs*0.95,p[1]+dy/l*fs*0.95],"rgba(238,235,224,.85)",fs,false)});
+  if(!ok){slots.forEach((s,k)=>drawSlot(k,fs));return}
+  // 交点（S, T, …）
+  const k=sec.poly.length;
+  sec.poly.forEach((q,i)=>{
+    if(!EXTRA.includes(names[i]))return;
+    const appear=t>0?clamp(pCons*k-(i-1)):1;
+    if(appear<=0)return;
+    const p=pr(q);ctx.globalAlpha=appear;
+    ctx.fillStyle=YEL;ctx.beginPath();ctx.arc(p[0],p[1],5,0,Math.PI*2);ctx.fill();
+    label(names[i],[p[0]+fs*0.8,p[1]-fs*0.7],YEL,fs*1.05);ctx.globalAlpha=1;
+  });
+  slots.forEach((s,k)=>drawSlot(k,fs));
+}
+function drawSlot(k,fs){
+  const p=pr(slotPoint(slots[k]));
+  if(k===active){ctx.strokeStyle="rgba(255,208,100,.8)";ctx.lineWidth=2;ctx.beginPath();ctx.arc(p[0],p[1],10,0,Math.PI*2);ctx.stroke()}
+  ctx.fillStyle=SLOT_COL[k];ctx.beginPath();ctx.arc(p[0],p[1],6,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#1c2e28";ctx.lineWidth=1.5;ctx.stroke();
+  label(SLOT_NM[k],[p[0]-fs*0.85,p[1]-fs*0.75],SLOT_COL[k],fs*1.1);
+}
+
+function drawSplit(pSep,fs){
+  const pView=ease(ph('view'));
+  const L=unit(add(add(CAM.d,mul(CAM.u,0.7)),mul(CAM.r,-0.4)));
+  const offs=[mul(sec.n,0.38*pSep),mul(sec.n,-0.38*pSep*(1-pView))];
+  const alphas=[1-pView,1];
+  const order=[0,1].sort((a,b)=>pr(add(pieces[a].cen,offs[a]))[2]-pr(add(pieces[b].cen,offs[b]))[2]);
+  for(const pi of order){
+    const pc=pieces[pi],off=offs[pi];if(alphas[pi]<=0.01)continue;
+    ctx.globalAlpha=alphas[pi];
+    const fl=pc.faces.filter(f=>dot(f.n,CAM.d)>1e-6).sort((a,b)=>pr(add(a.c,off))[2]-pr(add(b.c,off))[2]);
+    for(const f of fl){
+      const lt=0.5+0.5*Math.max(0,dot(f.n,L));
+      ctx.fillStyle=f.cap?shadeCol(255,132,102,0.75+0.25*lt):shadeCol(96,138,122,lt);
+      polyPath(f.pts.map(q=>pr(add(q,off))));ctx.fill();
+      ctx.strokeStyle=f.cap?"rgba(255,230,210,.9)":"rgba(238,235,224,.75)";ctx.lineWidth=f.cap?2:1.4;ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+  }
+  // 断面の頂点名と長さ（残る側）
+  const off=offs[1],k=sec.poly.length;
+  const PP=sec.poly.map(q=>pr(add(q,off))),C=pr(add(sec.c,off));
+  PP.forEach((p,i)=>{const dx=p[0]-C[0],dy=p[1]-C[1],l=Math.hypot(dx,dy)||1;
+    label(names[i],[p[0]+dx/l*fs,p[1]+dy/l*fs],EXTRA.includes(names[i])?YEL:SLOT_COL[SLOT_NM.indexOf(names[i])],fs*1.05)});
+  if(pView>0.6){
+    ctx.globalAlpha=clamp((pView-0.6)/0.4);
+    for(let i=0;i<k;i++){
+      const a=sec.poly[i],b=sec.poly[(i+1)%k],m=[(PP[i][0]+PP[(i+1)%k][0])/2,(PP[i][1]+PP[(i+1)%k][1])/2];
+      const dx=m[0]-C[0],dy=m[1]-C[1],l=Math.hypot(dx,dy)||1;
+      const ex=exactLen(a,b)??norm(sub(a,b)).toFixed(3);
+      label(ex,[m[0]+dx/l*fs*1.3,m[1]+dy/l*fs*1.3],CH,fs*0.95,false);
+    }
+    label(classify(sec.poly),[C[0],C[1]],"#1c2e28",fs*1.1,false);
+    ctx.globalAlpha=1;
+  }
+}
+
+// ---------- 再生 ----------
+function viewTarget(){const n=sec.n;return{yaw:Math.atan2(n[1],n[0]),pitch:Math.asin(Math.max(-1,Math.min(1,n[2])))}}
+function step(dt){
+  t+=dt*speed;
+  if(TL&&!sec.faceOnly&&!userCam&&t>=TL.view[0]){
+    if(!camFrom)camFrom={yaw,pitch};
+    const tg=viewTarget();let dy=tg.yaw-camFrom.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));
+    const e=ease(ph('view'));yaw=camFrom.yaw+dy*e;pitch=camFrom.pitch+(tg.pitch-camFrom.pitch)*e;
+  }
+  if(t>=T_END){t=T_END;playing=false}
+}
+function updateBtn(){btn.textContent=playing?'❚❚ 一時停止':(t>=T_END&&t>0?'↺ もう一度切る':(t>0?'▶ 再開':'✂ 切る'))}
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(playing){step(dt);draw();updateBtn()}
+  requestAnimationFrame(loop);
+}
+btn.addEventListener('click',()=>{
+  if(!sec||sec.err)return;
+  if(playing)playing=false;
+  else{
+    if(t>=T_END||t===0){if(camBefore&&t>=T_END){yaw=camBefore.yaw;pitch=camBefore.pitch}t=0;camFrom=null;userCam=false;camBefore={yaw,pitch}}
+    playing=true;
+  }
+  updateBtn();draw();
+});
+document.getElementById('back').addEventListener('click',()=>{
+  playing=false;t=0;camFrom=null;userCam=false;
+  if(camBefore){yaw=camBefore.yaw;pitch=camBefore.pitch;camBefore=null}
+  updateBtn();draw();
+});
+document.getElementById('view').addEventListener('click',()=>{yaw=DEF_YAW;pitch=DEF_PITCH;userCam=true;draw()});
+document.querySelectorAll('#speeds button').forEach(b=>b.addEventListener('click',()=>{
+  speed=parseFloat(b.dataset.s);document.querySelectorAll('#speeds button').forEach(x=>x.classList.toggle('on',x===b));
+}));
+
+// ---------- マウス・タッチ操作 ----------
+let drag=null;
+function mpos(e){const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]}
+function nearestOnSeg(m,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],L2=dx*dx+dy*dy||1;const s=clamp(((m[0]-a[0])*dx+(m[1]-a[1])*dy)/L2);return{s,d:Math.hypot(a[0]+dx*s-m[0],a[1]+dy*s-m[1])}}
+const splitNow=()=>sec&&!sec.err&&pieces&&t>TL.sep[0];
+cv.addEventListener('pointerdown',e=>{
+  const m=mpos(e);cv.setPointerCapture(e.pointerId);
+  if(!splitNow()){
+    for(let k=0;k<3;k++){const p=pr(slotPoint(slots[k]));if(Math.hypot(p[0]-m[0],p[1]-m[1])<14){drag={type:'pt',k,m0:m,moved:false};active=k;renderSlots();return}}
+  }
+  drag={type:'rot',m0:m,last:m,moved:false};cv.classList.add('dragging');
+});
+cv.addEventListener('pointermove',e=>{
+  if(!drag)return;const m=mpos(e);
+  if(Math.hypot(m[0]-drag.m0[0],m[1]-drag.m0[1])>4)drag.moved=true;
+  if(drag.type==='rot'){
+    yaw-=(m[0]-drag.last[0])*0.01;pitch=Math.max(-1.5,Math.min(1.5,pitch+(m[1]-drag.last[1])*0.01));
+    drag.last=m;if(playing||t>0)userCam=true;draw();
+  }else if(drag.moved){
+    const s=slots[drag.k],[i,j]=EDGES[s.e];const r=nearestOnSeg(m,pr(V[i]),pr(V[j]));
+    const nt=Math.round(r.s*12);if(nt!==s.t){s.t=nt;recompute()}
+  }
+});
+cv.addEventListener('pointerup',e=>{
+  if(!drag)return;const m=mpos(e);cv.classList.remove('dragging');
+  if(drag.type==='rot'&&!drag.moved&&!splitNow()){
+    let best=null;
+    EDGES.forEach(([i,j],ei)=>{const r=nearestOnSeg(m,pr(V[i]),pr(V[j]));if(r.d<16&&(!best||r.d<best.d))best={ei,s:r.s,d:r.d}});
+    if(best){slots[active]={e:best.ei,t:Math.round(best.s*12)};active=(active+1)%3;recompute()}
+  }
+  drag=null;
+});
+
+window.addEventListener('resize',resize);
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&!['BUTTON','INPUT','SELECT'].includes(e.target.tagName)){e.preventDefault();btn.click()}});
+slots=PRESETS[7][1].map(([e,tt])=>({e:EN.indexOf(e),t:tt}));
+resize();recompute();requestAnimationFrame(x=>{last=x;loop(x)});
+})();
+</script>
+</body>
+</html>

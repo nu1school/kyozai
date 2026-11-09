@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>三平方の定理を目で見る</title>
+<style>
+:root{
+  --board:#1c2e28; --board2:#233a33; --frame:#6b4f35;
+  --chalk:#eeebe0; --dim:#9fb1a8; --yellow:#ffd064; --blue:#72c8ff; --coral:#ff8466;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#2b2520;color:var(--chalk);
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;}
+.page{max-width:1180px;margin:0 auto;padding:22px 18px 40px}
+h1{font-family:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP",serif;
+  font-weight:600;font-size:clamp(22px,3.2vw,34px);letter-spacing:.04em;margin:4px 0 4px}
+.sub{color:#cdbfa9;margin:0 0 14px;font-size:15px;line-height:1.7}
+.modes{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.modes button{font:inherit;font-size:15px;color:#cdbfa9;background:transparent;border:1px solid rgba(238,235,224,.25);
+  border-radius:8px;padding:9px 16px;cursor:pointer;text-align:left;line-height:1.35}
+.modes button small{display:block;font-size:12px;color:#9a8f7e}
+.modes button.on{background:rgba(255,208,100,.1);border-color:var(--yellow);color:var(--chalk)}
+.board{background:radial-gradient(ellipse at 45% 35%,var(--board2),var(--board) 70%);
+  border:12px solid var(--frame);border-radius:6px;
+  box-shadow:inset 0 0 60px rgba(0,0,0,.45),0 10px 30px rgba(0,0,0,.4);padding:12px 14px 10px}
+#wrap{width:100%}
+canvas{display:block;width:100%}
+.tray{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:14px 4px 4px;
+  border-top:1px dashed rgba(238,235,224,.18);margin-top:8px}
+#play{font:inherit;font-size:17px;font-weight:700;color:#1c2e28;background:var(--chalk);
+  border:none;border-radius:999px;padding:11px 26px;cursor:pointer;min-width:150px;box-shadow:0 3px 0 #b9b4a4}
+#play:active{transform:translateY(2px);box-shadow:0 1px 0 #b9b4a4}
+button:focus-visible,input:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+.scrubbox{flex:1 1 220px;display:flex;align-items:center;gap:8px;font-size:14px;color:var(--dim)}
+#scrub{flex:1;accent-color:var(--yellow)}
+.ctl{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--dim)}
+.ctl input[type=range]{accent-color:var(--yellow);width:110px}
+.seg button{font:inherit;font-size:13px;background:transparent;color:var(--dim);
+  border:1px solid rgba(238,235,224,.3);border-left-width:0;padding:5px 10px;cursor:pointer}
+.seg button:first-child{border-left-width:1px;border-radius:6px 0 0 6px}
+.seg button:last-child{border-radius:0 6px 6px 0}
+.seg button.on{background:rgba(238,235,224,.16);color:var(--chalk)}
+.row2{width:100%;display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center}
+.lower{display:grid;grid-template-columns:1.3fr 1fr;gap:22px;margin-top:22px}
+@media (max-width:820px){.lower{grid-template-columns:1fr}}
+ol.steps{list-style:none;margin:0;padding:0;counter-reset:s}
+ol.steps li{counter-increment:s;position:relative;padding:10px 12px 10px 48px;margin-bottom:6px;
+  border-left:3px solid transparent;color:#a99d8b;line-height:1.65;font-size:14.5px;transition:all .3s}
+ol.steps li::before{content:counter(s);position:absolute;left:12px;top:9px;width:24px;height:24px;
+  border-radius:50%;border:1.5px solid currentColor;text-align:center;font-size:13px;line-height:22px}
+ol.steps li b{display:block;font-size:15.5px;color:inherit}
+ol.steps li.on{color:#f3ead8;border-left-color:var(--yellow);background:rgba(255,208,100,.07)}
+ol.steps li.done{color:#d8ccb7}
+.card{background:var(--board);border:1px solid #3d5048;border-radius:6px;padding:18px 20px}
+.card h2{font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-weight:600;font-size:18px;margin:0 0 10px}
+.big{font-family:"Times New Roman","Hiragino Mincho ProN","Yu Mincho",serif;font-size:clamp(20px,2.5vw,27px);line-height:1.9;min-height:3.9em}
+.big .a{color:var(--blue)} .big .b{color:var(--yellow)} .big .c{color:var(--coral)}
+.note{font-size:13.5px;color:var(--dim);line-height:1.8;margin:12px 0 0}
+.math{font-family:"Times New Roman","Hiragino Mincho ProN",serif;font-style:italic}
+@media (prefers-reduced-motion:reduce){ol.steps li{transition:none}}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>三平方の定理を目で見る</h1>
+  <p class="sub">直角をはさむ2辺の正方形 <span class="math">a</span>² と <span class="math">b</span>² が、形を変えながら斜辺の正方形 <span class="math">c</span>² にぴったり収まる様子を3通りの方法で見られます。</p>
+
+  <div class="modes" id="modes" role="group" aria-label="見せ方">
+    <button type="button" data-m="euclid" class="on">等積変形<small>ずらす・すべらす（ユークリッド）</small></button>
+    <button type="button" data-m="rearr">並べ替え<small>三角形4個を動かす</small></button>
+    <button type="button" data-m="perigal">切り分け<small>4つに切って運ぶ（ペリガル）</small></button>
+  </div>
+
+  <div class="board">
+    <div id="wrap"><canvas id="cv" aria-label="三平方の定理のアニメーション"></canvas></div>
+    <div class="tray">
+      <button id="play" type="button">▶ スタート</button>
+      <div class="scrubbox"><span>経過</span><input id="scrub" type="range" min="0" max="1" step="0.001" value="0" aria-label="アニメーションの位置"></div>
+      <div class="ctl">速さ
+        <div class="seg" role="group" aria-label="再生速度" id="speeds">
+          <button type="button" data-s="0.5">ゆっくり</button><button type="button" data-s="1" class="on">ふつう</button><button type="button" data-s="2">はやい</button>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="ctl">辺の比
+          <div class="seg" role="group" aria-label="辺の比のプリセット" id="presets">
+            <button type="button" data-a="3" data-b="4" class="on">3 : 4 : 5</button><button type="button" data-a="5" data-b="12">5 : 12 : 13</button><button type="button" data-a="8" data-b="15">8 : 15 : 17</button><button type="button" data-a="1" data-b="1">1 : 1 : √2</button>
+          </div>
+        </div>
+        <label class="ctl">自由に <span class="math">a</span>/<span class="math">b</span> <input id="ratio" type="range" min="0.25" max="1" step="0.01" value="0.75"></label>
+        <span class="ctl" id="ratioText"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="lower">
+    <ol class="steps" id="steps"></ol>
+    <div class="card">
+      <h2>面積の関係</h2>
+      <div class="big" id="eq"></div>
+      <p class="note" id="note"></p>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+const COL={chalk:"#eeebe0",a:"#72c8ff",b:"#ffd064",c:"#ff8466",dim:"rgba(238,235,224,.4)"};
+const PIECE=["#ffd064","#ffc34d","#ffe08f","#f2b43a"];
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),wrap=document.getElementById('wrap');
+const btn=document.getElementById('play'),scrub=document.getElementById('scrub'),eqEl=document.getElementById('eq');
+const stepsEl=document.getElementById('steps'),noteEl=document.getElementById('note');
+let W,H,dpr=1,S=10,OX=0,OY=0;
+let mode="euclid",A_=3,B_=4,t=0,playing=false,speed=1,last=0;
+let G,PG,TL,T_END,STEPS;
+
+const add=(p,q)=>[p[0]+q[0],p[1]+q[1]],subv=(p,q)=>[p[0]-q[0],p[1]-q[1]],mulv=(p,s)=>[p[0]*s,p[1]*s];
+const lerpP=(p,q,e)=>[p[0]+(q[0]-p[0])*e,p[1]+(q[1]-p[1])*e];
+const clamp=x=>Math.max(0,Math.min(1,x));
+const ease=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const ph=k=>clamp((t-TL[k][0])/(TL[k][1]-TL[k][0]));
+const E=k=>ease(ph(k));
+const cen=ps=>{let x=0,y=0;ps.forEach(p=>{x+=p[0];y+=p[1]});return[x/ps.length,y/ps.length]};
+
+// ---------- 幾何 ----------
+function clipHalf(poly,f){const r=[];for(let i=0;i<poly.length;i++){const p=poly[i],q=poly[(i+1)%poly.length],fp=f(p),fq=f(q);
+  if(fp>=0)r.push(p);if((fp>0&&fq<0)||(fp<0&&fq>0)){const s=fp/(fp-fq);r.push([p[0]+(q[0]-p[0])*s,p[1]+(q[1]-p[1])*s])}}return r}
+function build(){
+  const a=A_,b=B_,c=Math.hypot(a,b);
+  const A=[0,0],B=[c,0],C=[b*b/c,a*b/c],Hh=[b*b/c,0];
+  const nb=[-a/c*b,b/c*b],na=[b/c*a,a/c*a];
+  G={a,b,c,A,B,C,H:Hh,
+     Sb:[A,C,add(C,nb),add(A,nb)],Sa:[B,C,add(C,na),add(B,na)],
+     Sc:[[0,0],[c,0],[c,-c],[0,-c]]};
+  // ペリガル
+  const O=cen(G.Sb),corner={"1,1":[0,-c],"-1,1":[c,-c],"1,-1":[0,0],"-1,-1":[c,0]};
+  const pieces=[];let i=0;
+  for(const [sx,sy] of [[1,1],[-1,1],[-1,-1],[1,-1]]){
+    let pl=clipHalf(G.Sb,p=>sx*(p[0]-O[0]));pl=clipHalf(pl,p=>sy*(p[1]-O[1]));
+    const tg=corner[sx+","+sy];
+    pieces.push({pts:pl,d:subv(tg,O),ex:[sx*b*0.07,sy*b*0.07],col:PIECE[i++]});
+  }
+  PG={O,pieces,dA:subv([c/2,-c/2],cen(G.Sa))};
+  // 並べ替え
+  const s=a+b;
+  const tri=(R,P1,P2)=>[R,P1,P2];
+  G.R1=[tri([0,a],[a,a],[0,s]),tri([a,s],[0,s],[a,a]),tri([a,a],[a,0],[s,a]),tri([s,0],[s,a],[a,0])];
+  G.R2=[tri([0,0],[a,0],[0,b]),tri([s,s],[b,s],[s,a]),tri([0,s],[0,b],[b,s]),tri([s,0],[s,a],[a,0])];
+  setupTimeline();
+}
+function setupTimeline(){
+  if(mode==="euclid"){
+    TL={intro:[0,1.2],b1:[1.5,3],b2:[3.2,4.4],b3:[4.6,6.1],a1:[6.6,8.1],a2:[8.3,9.5],a3:[9.7,11.2],sum:[11.6,12.8]};T_END=13.4;
+    STEPS=[[0,"直角三角形と3つの正方形","斜辺を c、直角をはさむ2辺を a, b とし、各辺の上に正方形をかく。"],
+      [1.5,"正方形 b² をずらす","底辺を固定したまま平行にずらすと平行四辺形になる。底辺も高さも変わらないので面積は b² のまま。"],
+      [3.2,"下へすべらせる","形を変えずに、縦の辺にそって真下へ平行移動する。"],
+      [4.6,"もう一度ずらして長方形に","縦の辺を固定してずらすと、斜辺の正方形の中の長方形にぴったり重なる。"],
+      [6.6,"正方形 a² も同じように","同じ3つの動きで、残りの長方形にぴったり収まる。"],
+      [11.6,"まとめ","斜辺の正方形は2つの長方形でちょうど埋まる。だから a² + b² = c²。"]];
+    noteEl.textContent="「ずらす」はせん断（等積変形）で、平行な2本の線の間で図形を傾ける操作です。底辺と高さが変わらないので面積は保たれます。";
+  }else if(mode==="rearr"){
+    TL={intro:[0,1.2],lab:[1.2,2.2],m0:[2.6,4],m1:[3.6,5],m2:[4.6,6],cfill:[6,6.8],sum:[7,8.2]};T_END=8.8;
+    STEPS=[[0,"1辺 a+b の正方形","中に正方形 a² と b²、そして元の直角三角形4個が入っている。"],
+      [2.6,"三角形を動かす","三角形を回さずにすべらせて、大きい正方形の四隅へ移す。"],
+      [6,"すき間が c²","真ん中に1辺 c の正方形のすき間ができる。大きい正方形も三角形4個も同じなので、残りの面積も等しい。a² + b² = c²。"]];
+    noteEl.textContent="動かす前後で、外側の正方形 (a+b)² と三角形4個の面積はまったく同じ。だから「残り」の面積も等しくなります。";
+  }else{
+    const st=3.6;TL={intro:[0,1.2],cut:[1.4,2.6],ex:[2.8,3.4]};
+    for(let i=0;i<4;i++)TL["p"+i]=[st+i*1.0,st+i*1.0+1.4];
+    TL.am=[8.2,9.6];TL.sum=[10,11.2];T_END=11.8;
+    STEPS=[[0,"3つの正方形","直角三角形の各辺に正方形をかく。"],
+      [1.4,"大きい方 b² を切る","b² の中心を通り、斜辺に平行な線と垂直な線で4つに切る。"],
+      [3.6,"4つのピースを運ぶ","回転させずに平行移動だけで、c² の四隅へ運ぶ。"],
+      [8.2,"a² を真ん中へ","真ん中に残った穴に a² がぴったりはまる。"],
+      [10,"まとめ","c² が a² と b² のピースで過不足なく埋まった。a² + b² = c²。"]];
+    noteEl.textContent="ペリガル（1830年）の分割。どのピースも回転させずに平行移動するだけで収まるのが特徴です。";
+  }
+  stepsEl.innerHTML=STEPS.map(s=>`<li><b>${s[1]}</b>${s[2]}</li>`).join("");
+}
+
+// ---------- 画面 ----------
+function bbox(){
+  if(mode==="rearr"){const s=G.a+G.b;return[-G.b-s*0.35,s+0.2,-0.2,s+0.2]}
+  const pts=[...G.Sa,...G.Sb,...G.Sc,add(G.C,[0,G.c]),add(G.A,[0,G.c]),add(G.B,[0,G.c])];
+  const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+  return[Math.min(...xs),Math.max(...xs),Math.min(...ys),Math.max(...ys)];
+}
+function fit(){
+  const [x0,x1,y0,y1]=bbox(),pad=26;
+  S=Math.min((W-2*pad)/(x1-x0),(H-2*pad)/(y1-y0));
+  OX=(W-(x1-x0)*S)/2-x0*S;OY=(H+(y1-y0)*S)/2+y0*S;
+}
+function resize(){
+  dpr=window.devicePixelRatio||1;W=wrap.clientWidth;H=Math.max(320,Math.min(720,W*0.7,(window.innerHeight-(wrap.getBoundingClientRect().top+window.scrollY)-((document.querySelector('.tray')||{}).offsetHeight||0)-44)));
+  cv.style.height=H+'px';cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
+  fit();draw();
+}
+const P=p=>[OX+p[0]*S,OY-p[1]*S];
+function path(ps){ctx.beginPath();ps.forEach((q,i)=>{const r=P(q);i?ctx.lineTo(r[0],r[1]):ctx.moveTo(r[0],r[1])});ctx.closePath()}
+function shape(ps,fill,alpha,stroke,dash){
+  if(alpha<=0)return;ctx.globalAlpha=alpha;
+  if(fill){ctx.fillStyle=fill;path(ps);ctx.fill()}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1.8;ctx.setLineDash(dash||[]);path(ps);ctx.stroke();ctx.setLineDash([])}
+  ctx.globalAlpha=1;
+}
+function hexA(h,a){const v=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));return`rgba(${v.join(',')},${a})`}
+function text(str,p,col,size,alpha){
+  if(alpha<=0)return;const r=P(p);ctx.globalAlpha=alpha;
+  ctx.font=`italic ${size}px "Times New Roman","Hiragino Mincho ProN",serif`;ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.lineWidth=4;ctx.strokeStyle="rgba(28,46,40,.8)";ctx.strokeText(str,r[0],r[1]);ctx.fillStyle=col;ctx.fillText(str,r[0],r[1]);ctx.globalAlpha=1;
+}
+function sq(str,p,col,side,alpha){text(str.replace("²",""),p,col,Math.max(14,Math.min(34,side*S*0.32)),alpha);
+  // 右上に小さい2
+  const r=P(p),fs=Math.max(14,Math.min(34,side*S*0.32));ctx.globalAlpha=Math.max(0,alpha);
+  ctx.font=`${fs*0.6}px "Times New Roman",serif`;ctx.fillStyle=col;ctx.textAlign="left";ctx.fillText("2",r[0]+fs*0.28,r[1]-fs*0.35);ctx.globalAlpha=1}
+
+function triangleLabels(al){
+  const g=G,cc=cen([g.A,g.B,g.C]);
+  const mid=(p,q)=>[(p[0]+q[0])/2,(p[1]+q[1])/2];
+  const toward=(m,k)=>lerpP(m,cc,k);
+  const fs=Math.max(14,Math.min(26,S*g.c*0.07));
+  text("a",toward(mid(g.B,g.C),0.35),COL.chalk,fs,al);text("b",toward(mid(g.A,g.C),0.35),COL.chalk,fs,al);text("c",toward(mid(g.A,g.B),0.35),COL.chalk,fs,al);
+  // 直角の印
+  const u=subv(g.A,g.C),v=subv(g.B,g.C),k=g.c*0.06;
+  const p1=add(g.C,mulv(u,k/g.b)),p2=add(g.C,mulv(v,k/g.a)),p3=add(p1,mulv(v,k/g.a));
+  ctx.globalAlpha=al;ctx.strokeStyle=COL.chalk;ctx.lineWidth=1.2;ctx.beginPath();
+  let r=P(p1);ctx.moveTo(r[0],r[1]);r=P(p3);ctx.lineTo(r[0],r[1]);r=P(p2);ctx.lineTo(r[0],r[1]);ctx.stroke();ctx.globalAlpha=1;
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  if(mode==="euclid")drawEuclid();else if(mode==="rearr")drawRearr();else drawPerigal();
+}
+
+// ---- 等積変形 ----
+function euclidShape(S0,base0,base1,k){
+  // S0 = [P0,P1,P2,P3]（P0P1 が三角形の辺）。k=1..3 の段階で変形
+  const up=[0,G.c];
+  const e1=E(k+"1"),e2=E(k+"2"),e3=E(k+"3");
+  let ps=[S0[0],S0[1],lerpP(S0[2],add(S0[1],up),e1),lerpP(S0[3],add(S0[0],up),e1)];
+  ps=ps.map(p=>add(p,[0,-G.c*e2]));
+  const slope=(G.C[1]-base0[1])/(G.C[0]-base0[0]);
+  ps=ps.map(p=>[p[0],p[1]-e3*slope*(p[0]-base0[0])]);
+  return ps;
+}
+function drawEuclid(){
+  const g=G,pi=E('intro'),ps=E('sum');
+  // 斜辺の正方形
+  shape(g.Sc,hexA(COL.c,0.1+0.25*ps),pi,COL.c,ps>0?[]:[7,6]);
+  // 元の位置の影
+  shape(g.Sb,null,pi*0.5,"rgba(255,208,100,.6)",[5,5]);
+  shape(g.Sa,null,pi*0.5,"rgba(114,200,255,.6)",[5,5]);
+  // 動く正方形
+  const sb=euclidShape(g.Sb,g.A,g.H,"b"),sa=euclidShape(g.Sa,g.B,g.H,"a");
+  shape(sb,hexA(COL.b,0.55),pi,COL.b);shape(sa,hexA(COL.a,0.55),pi,COL.a);
+  // 三角形
+  shape([g.A,g.B,g.C],"rgba(238,235,224,.14)",pi,COL.chalk);
+  // 垂線（高さの線）
+  if(t>=TL.b3[0]){ctx.globalAlpha=0.5;ctx.setLineDash([4,5]);ctx.strokeStyle=COL.chalk;ctx.lineWidth=1.2;ctx.beginPath();let r=P(g.C);ctx.moveTo(r[0],r[1]);r=P([g.H[0],-g.c]);ctx.lineTo(r[0],r[1]);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1}
+  triangleLabels(pi);
+  sq("b²",cen(sb),"#fff3cf",g.b,pi);sq("a²",cen(sa),"#dcf2ff",g.a,pi);
+  const sc=[g.c/2,-g.c/2];
+  if(t<TL.b3[1])sq("c²",sc,COL.c,g.c*0.8,pi*(1-E('b1')));
+}
+
+// ---- 並べ替え ----
+function drawRearr(){
+  const g=G,a=g.a,b=g.b,s=a+b,pi=E('intro'),pl=E('lab'),cf=E('cfill'),psum=E('sum');
+  // 参考の三角形（左）
+  const ox=-b-s*0.3,T=[[ox,0],[ox+b,0],[ox,a]];
+  shape(T,"rgba(238,235,224,.14)",pi,COL.chalk);
+  const fs=Math.max(14,Math.min(24,S*s*0.055));
+  text("b",[ox+b/2,-s*0.05],COL.chalk,fs,pi);text("a",[ox-s*0.05,a/2],COL.chalk,fs,pi);text("c",[ox+b/2+s*0.05,a/2+s*0.04],COL.chalk,fs,pi);
+  // 外枠
+  shape([[0,0],[s,0],[s,s],[0,s]],null,pi,COL.chalk);
+  const mv=[E('m0'),E('m1'),E('m2')];
+  // a², b² の色
+  const fadeAB=pi*(1-clamp(Math.max(...mv)*1.5));
+  shape([[0,0],[a,0],[a,a],[0,a]],hexA(COL.a,0.5),fadeAB,null);
+  shape([[a,a],[s,a],[s,s],[a,s]],hexA(COL.b,0.5),fadeAB,null);
+  // c²
+  const tilt=[[a,0],[s,a],[b,s],[0,b]];
+  shape(tilt,hexA(COL.c,0.45),cf,COL.c);
+  // 三角形
+  for(let i=0;i<4;i++){
+    const e=i<3?mv[i]:0;
+    const ps=G.R1[i].map((p,j)=>lerpP(p,G.R2[i][j],e));
+    shape(ps,"rgba(238,235,224,.2)",pi,COL.chalk);
+  }
+  sq("a²",[a/2,a/2],"#dcf2ff",a,pi*pl*(1-Math.min(1,Math.max(...mv)*2)));
+  sq("b²",[a+b/2,a+b/2],"#fff3cf",b,pi*pl*(1-Math.min(1,Math.max(...mv)*2)));
+  sq("c²",[s/2,s/2],"#ffe1d8",Math.hypot(a,b)*0.8,cf);
+}
+
+// ---- 切り分け ----
+function drawPerigal(){
+  const g=G,pi=E('intro'),pc=E('cut'),pe=E('ex'),pam=E('am'),ps=E('sum');
+  shape(g.Sc,hexA(COL.c,0.08+0.2*ps),pi,COL.c,ps>0?[]:[7,6]);
+  shape(g.Sb,null,pi*0.45,"rgba(255,208,100,.6)",[5,5]);
+  shape(g.Sa,null,pi*0.45,"rgba(114,200,255,.6)",[5,5]);
+  shape([g.A,g.B,g.C],"rgba(238,235,224,.14)",pi,COL.chalk);
+  triangleLabels(pi);
+  // 切断線
+  if(pc>0&&t<TL.p0[0]+0.5){
+    const O=PG.O,R=g.b;ctx.globalAlpha=1-clamp((t-TL.p0[0])/0.5);
+    ctx.save();path(g.Sb);ctx.clip();
+    ctx.strokeStyle=COL.chalk;ctx.lineWidth=2;ctx.setLineDash([6,4]);
+    ctx.beginPath();let r=P([O[0]-R*pc,O[1]]);ctx.moveTo(r[0],r[1]);r=P([O[0]+R*pc,O[1]]);ctx.lineTo(r[0],r[1]);
+    r=P([O[0],O[1]-R*pc]);ctx.moveTo(r[0],r[1]);r=P([O[0],O[1]+R*pc]);ctx.lineTo(r[0],r[1]);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+    ctx.globalAlpha=1;
+  }
+  if(pc<=0)shape(g.Sb,hexA(COL.b,0.55),pi,COL.b);
+  else PG.pieces.forEach((q,i)=>{
+    const e=E("p"+i);
+    const off=add(mulv(q.ex,pe*(1-e)),mulv(q.d,e));
+    const pts=q.pts.map(p=>add(p,off));
+    shape(pts,hexA(q.col,pc>0?0.62:0.55),pi,pc>0?"#fff3cf":COL.b);
+  });
+  const sa=g.Sa.map(p=>add(p,mulv(PG.dA,pam)));
+  shape(sa,hexA(COL.a,0.6),pi,COL.a);
+  if(pc<=0)sq("b²",cen(g.Sb),"#fff3cf",g.b,pi);
+  sq("a²",cen(sa),"#dcf2ff",g.a,pi);
+  sq("c²",[g.c/2,-g.c/2],COL.c,g.c*0.8,pi*(1-E('p0'))*(1-ps)+0);
+}
+
+// ---------- 数式パネル ----------
+function updateUI(){
+  let s=0;STEPS.forEach((st,i)=>{if(t>=st[0])s=i});
+  const started=t>0||playing;
+  [...stepsEl.children].forEach((el,i)=>{el.classList.toggle('on',started&&i===s);el.classList.toggle('done',started&&i<s)});
+  const a=G.a,b=G.b,c=G.c,nice=Number.isInteger(a)&&Number.isInteger(b);
+  const fm=x=>Number.isInteger(x)?String(x):x.toFixed(3).replace(/0+$/,"");
+  const cS=nice&&Number.isInteger(c)?String(c):(a===1&&b===1?"√2":fm(c));
+  const nums=nice?`<br><span class="a">${a*a}</span> + <span class="b">${b*b}</span> = <span class="c">${fm(a*a+b*b)}</span>${Number.isInteger(c)?` = <span class="c">${c}²</span>`:""}`:"";
+  let h;
+  const done=t>=TL.sum[0]||(mode==="rearr"&&t>=TL.cfill[0]);
+  if(!done)h=`<span class="a">a²</span> + <span class="b">b²</span> = ？<br><span style="font-size:.75em;color:#9fb1a8">a : b : c = ${fm(a)} : ${fm(b)} : ${cS}</span>`;
+  else h=`<span class="a">a²</span> + <span class="b">b²</span> = <span class="c">c²</span>${nums}`;
+  if(eqEl.innerHTML!==h)eqEl.innerHTML=h;
+  scrub.value=t/T_END;
+  btn.textContent=playing?'❚❚ 一時停止':(t>=T_END?'↺ もう一度':(t>0?'▶ 再開':'▶ スタート'));
+  document.getElementById('ratioText').textContent=nice?"":`a : b = ${fm(a)} : 1`;
+}
+
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(playing){t+=dt*speed;if(t>=T_END){t=T_END;playing=false}draw();updateUI()}
+  requestAnimationFrame(loop);
+}
+function reset(){playing=false;t=0;build();fit();draw();updateUI()}
+btn.addEventListener('click',()=>{if(playing)playing=false;else{if(t>=T_END)t=0;playing=true}updateUI();draw()});
+scrub.addEventListener('input',()=>{playing=false;t=parseFloat(scrub.value)*T_END;draw();updateUI()});
+document.querySelectorAll('#modes button').forEach(b=>b.addEventListener('click',()=>{
+  mode=b.dataset.m;document.querySelectorAll('#modes button').forEach(x=>x.classList.toggle('on',x===b));reset();
+}));
+document.querySelectorAll('#speeds button').forEach(b=>b.addEventListener('click',()=>{
+  speed=parseFloat(b.dataset.s);document.querySelectorAll('#speeds button').forEach(x=>x.classList.toggle('on',x===b));
+}));
+document.querySelectorAll('#presets button').forEach(b=>b.addEventListener('click',()=>{
+  A_=+b.dataset.a;B_=+b.dataset.b;document.querySelectorAll('#presets button').forEach(x=>x.classList.toggle('on',x===b));
+  document.getElementById('ratio').value=A_/B_;reset();
+}));
+document.getElementById('ratio').addEventListener('input',e=>{
+  A_=parseFloat(e.target.value);B_=1;document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('on'));reset();
+});
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&!['BUTTON','INPUT'].includes(e.target.tagName)){e.preventDefault();btn.click()}});
+window.addEventListener('resize',resize);
+build();resize();updateUI();requestAnimationFrame(x=>{last=x;loop(x)});
+})();
+</script>
+</body>
+</html>

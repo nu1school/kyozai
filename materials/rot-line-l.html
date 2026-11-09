@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>直線 ℓ のまわりの回転体</title>
+<style>
+:root{
+  --paper:#FBFAF6;
+  --ink:#1D2021;
+  --ink-2:#5A5F62;
+  --rule:#CDC9BE;
+  --red:#C0392B;
+  --red-soft:rgba(192,57,43,.16);
+  --blue:#2B5FA8;
+  --blue-soft:rgba(43,95,168,.14);
+  --slate:#5E6C7D;
+  --slate-soft:rgba(94,108,125,.16);
+  --tab-bg:#1D2021;
+  --tab-fg:#FBFAF6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#15181B;
+    --ink:#E9E6DE;
+    --ink-2:#9AA0A4;
+    --rule:#3A3F44;
+    --red:#E0715F;
+    --red-soft:rgba(224,113,95,.20);
+    --blue:#83ABE0;
+    --blue-soft:rgba(131,171,224,.18);
+    --slate:#9FB0C2;
+    --slate-soft:rgba(159,176,194,.18);
+    --tab-bg:#E9E6DE;
+    --tab-fg:#15181B;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#15181B;
+  --ink:#E9E6DE;
+  --ink-2:#9AA0A4;
+  --rule:#3A3F44;
+  --red:#E0715F;
+  --red-soft:rgba(224,113,95,.20);
+  --blue:#83ABE0;
+  --blue-soft:rgba(131,171,224,.18);
+  --slate:#9FB0C2;
+  --slate-soft:rgba(159,176,194,.18);
+  --tab-bg:#E9E6DE;
+  --tab-fg:#15181B;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",system-ui,sans-serif;
+  font-size:15px;
+  line-height:1.7;
+  -webkit-text-size-adjust:100%;
+}
+main{max-width:1080px;margin:0 auto;padding:22px 18px 56px}
+
+/* ---- 見出し（プリントのヘッダーに合わせる） ---- */
+.sheethead{border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:18px}
+.sheethead .src{font-size:12.5px;color:var(--ink-2);letter-spacing:.02em}
+.sheethead h1{
+  font-family:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP",serif;
+  font-size:clamp(19px,3.6vw,26px);
+  font-weight:600;margin:.15em 0 0;line-height:1.35;
+}
+.prob{
+  border-left:3px solid var(--slate);
+  background:var(--slate-soft);
+  padding:10px 14px;margin:16px 0 20px;
+  font-size:14.5px;max-width:74ch;
+}
+.prob b{font-weight:600}
+
+/* ---- パネル（unitbox 風の黒タブ） ---- */
+.stage{display:grid;grid-template-columns:1.32fr 1fr;gap:16px;align-items:start}
+.side{display:grid;gap:16px}
+.panel{
+  position:relative;margin:0;
+  border:1px solid var(--ink);
+  background:var(--paper);
+  padding:16px 10px 10px;
+}
+.tab{
+  position:absolute;top:-11px;left:10px;
+  background:var(--tab-bg);color:var(--tab-fg);
+  font-size:11.5px;font-weight:600;letter-spacing:.02em;
+  padding:1px 8px;white-space:nowrap;
+}
+canvas{display:block;width:100%;touch-action:none}
+#c3d{height:min(58vh,440px)}
+#cax{height:min(42vh,300px)}
+#cgr{height:112px}
+.note{font-size:11.5px;color:var(--ink-2);margin:6px 2px 0}
+
+/* ---- 操作 ---- */
+.controls{
+  margin-top:18px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+  padding:14px 0;display:grid;grid-template-columns:1fr 1fr;gap:14px 26px;align-items:center;
+}
+.ctl{display:grid;gap:4px}
+.ctl .lab{display:flex;justify-content:space-between;align-items:baseline;font-size:13px}
+.ctl .val{font-variant-numeric:tabular-nums;color:var(--ink-2);font-size:12.5px}
+input[type=range]{width:100%;accent-color:var(--red);margin:0}
+.toggles{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px}
+button{
+  font:inherit;font-size:13px;
+  border:1px solid var(--ink);background:transparent;color:var(--ink);
+  padding:4px 12px;cursor:pointer;
+}
+button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+
+/* ---- 解法 ---- */
+.solve{margin-top:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:0 22px}
+.solve div{padding:10px 0;border-top:1px solid var(--rule)}
+.solve h2{font-size:12px;font-weight:600;color:var(--ink-2);margin:0 0 2px}
+.solve p{margin:0;font-size:14px}
+.m{font-family:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",Georgia,serif;font-style:italic}
+.ans{color:var(--red);font-weight:600}
+.live{font-variant-numeric:tabular-nums}
+
+@media (max-width:760px){
+  .stage{grid-template-columns:1fr}
+  .controls{grid-template-columns:1fr}
+  #c3d{height:52vh}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <div class="sheethead">
+    <div class="src">理系数学Ⅲ　授業プリント No43''　練習2　／　アドバンスα 327</div>
+    <h1>直線 ℓ のまわりの回転体の体積</h1>
+  </div>
+
+  <p class="prob">領域 D（0 ≦ z ≦ cos y，0 ≦ y ≦ π/2）を，点 (1, 0, 0) を通り y 軸に平行な直線 ℓ のまわりに回転した立体 T</p>
+
+  <section class="stage">
+    <figure class="panel">
+      <figcaption class="tab">立体 T と 平面 y = t の切り口</figcaption>
+      <canvas id="c3d"></canvas>
+      <p class="note">ドラッグで視点を回せます。青＝回転軸 ℓ と 半径1の円、赤＝平面 <span class="m">y = t</span> の切り口。</p>
+    </figure>
+    <div class="side">
+      <figure class="panel">
+        <figcaption class="tab">軸 ℓ の方向から見た 平面 y = t</figcaption>
+        <canvas id="cax"></canvas>
+        <p class="note">線分 PQ は半径1の円に接する。P が軸に最も近い点、Q が最も遠い点。</p>
+      </figure>
+      <figure class="panel">
+        <figcaption class="tab">断面積 S(t)</figcaption>
+        <canvas id="cgr"></canvas>
+      </figure>
+    </div>
+  </section>
+
+  <section class="controls">
+    <div class="ctl">
+      <label class="lab" for="sTheta">回転角 <span class="m">θ</span><span class="val" id="vTheta">135°</span></label>
+      <input type="range" id="sTheta" min="0" max="360" step="1" value="135">
+    </div>
+    <div class="ctl">
+      <label class="lab" for="sT">切り口の位置 <span class="m">t</span><span class="val" id="vT">0.79</span></label>
+      <input type="range" id="sT" min="0" max="1.5708" step="0.005" value="0.7854">
+    </div>
+    <div class="toggles">
+      <button id="bPlay" aria-pressed="false">回転させる</button>
+      <button id="bSolid" aria-pressed="true">通過部分を表示</button>
+      <button id="bSect" aria-pressed="true">切り口を表示</button>
+      <button id="bReset">視点を戻す</button>
+    </div>
+  </section>
+
+  <section class="solve">
+    <div>
+      <h2>軸に垂直な平面で切る</h2>
+      <p>平面 <span class="m">y = t</span> 上で，<span class="m">D</span> の切り口は <span class="m">x = 0, 0 ≦ z ≦ cos t</span> の線分 PQ。</p>
+    </div>
+    <div>
+      <h2>最も近い点・最も遠い点</h2>
+      <p><span class="m">r</span> = 1、<span class="m">R</span> = √(1 + cos²<span class="m">t</span>) <span class="live" id="vR">= 1.225</span></p>
+    </div>
+    <div>
+      <h2>断面積</h2>
+      <p><span class="m">S(t)</span> = π(<span class="m">R</span>²−<span class="m">r</span>²) = π cos²<span class="m">t</span> <span class="live" id="vS">= 1.571</span></p>
+    </div>
+    <div>
+      <h2>体積</h2>
+      <p><span class="m">V</span> = ∫<sub>0</sub><sup>π/2</sup> π cos²<span class="m">t</span> d<span class="m">t</span> = <span class="ans">π²⁄4</span></p>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+"use strict";
+var TAU = Math.PI*2, HALFPI = Math.PI/2;
+
+var st = { theta: Math.PI*0.75, t: Math.PI/4, az: 0.45, el: 0.32,
+           solid:true, section:true, play:false };
+
+function css(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+var C = {};
+function readColors(){
+  C.ink=css('--ink'); C.ink2=css('--ink-2'); C.rule=css('--rule');
+  C.red=css('--red'); C.redSoft=css('--red-soft');
+  C.blue=css('--blue'); C.blueSoft=css('--blue-soft');
+  C.slate=css('--slate'); C.slateSoft=css('--slate-soft'); C.paper=css('--paper');
+}
+readColors();
+
+/* ---------- canvas setup ---------- */
+function setup(id){
+  var cv=document.getElementById(id), ctx=cv.getContext('2d'), o={cv:cv,ctx:ctx,w:0,h:0};
+  o.fit=function(){
+    var r=cv.getBoundingClientRect(), dpr=Math.min(window.devicePixelRatio||1,2);
+    o.w=Math.max(1,r.width); o.h=Math.max(1,r.height);
+    cv.width=Math.round(o.w*dpr); cv.height=Math.round(o.h*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  };
+  return o;
+}
+var A=setup('c3d'), B=setup('cax'), G=setup('cgr');
+
+/* ---------- geometry helpers ---------- */
+function rotAxis(p, phi){            /* rotate about line x=1, z=0 (parallel to y) */
+  var dx=p[0]-1, dz=p[2], c=Math.cos(phi), s=Math.sin(phi);
+  return [1+dx*c-dz*s, p[1], dx*s+dz*c];
+}
+function regionD(phi){
+  var n=36, pts=[], i, y;
+  for(i=0;i<=n;i++){ y=HALFPI*i/n; pts.push(rotAxis([0,y,Math.cos(y)],phi)); }
+  for(i=n;i>=0;i--){ y=HALFPI*i/n; pts.push(rotAxis([0,y,0],phi)); }
+  return pts;
+}
+function circleAt(y, rad){
+  var pts=[], n=64, i, a;
+  for(i=0;i<n;i++){ a=TAU*i/n; pts.push([1+rad*Math.cos(a), y, rad*Math.sin(a)]); }
+  return pts;
+}
+
+/* ---------- 3D projection ---------- */
+var CEN=[1, HALFPI/2, 0.05], view={};
+function buildView(w,h){
+  var ca=Math.cos(st.az), sa=Math.sin(st.az), ce=Math.cos(st.el), se=Math.sin(st.el);
+  var d=[ce*ca, ce*sa, se];
+  var right=[-sa, ca, 0];
+  var up=[ d[1]*right[2]-d[2]*right[1], d[2]*right[0]-d[0]*right[2], d[0]*right[1]-d[1]*right[0] ];
+  view={d:d,right:right,up:up,cx:w/2,cy:h/2,s:Math.min(w/4.5,h/3.6)};
+}
+function P3(p){
+  var q0=p[0]-CEN[0], q1=p[1]-CEN[1], q2=p[2]-CEN[2];
+  var sx=q0*view.right[0]+q1*view.right[1]+q2*view.right[2];
+  var sy=q0*view.up[0]+q1*view.up[1]+q2*view.up[2];
+  var dp=q0*view.d[0]+q1*view.d[1]+q2*view.d[2];
+  return [view.cx+sx*view.s, view.cy-sy*view.s, dp];
+}
+function path(ctx,pts,close){
+  var i,q;
+  for(i=0;i<pts.length;i++){ q=P3(pts[i]); if(i===0) ctx.moveTo(q[0],q[1]); else ctx.lineTo(q[0],q[1]); }
+  if(close!==false) ctx.closePath();
+}
+function depthOf(pts){
+  var s=0,i,q; for(i=0;i<pts.length;i++){ q=P3(pts[i]); s+=q[2]; } return s/pts.length;
+}
+function line3(ctx,a,b,color,lw,dash){
+  var p=P3(a), q=P3(b);
+  ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=lw||1;
+  if(dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(p[0],p[1]); ctx.lineTo(q[0],q[1]); ctx.stroke(); ctx.restore();
+}
+function text3(ctx,p,label,color,dx,dy){
+  var q=P3(p); ctx.fillStyle=color;
+  ctx.fillText(label, q[0]+(dx||0), q[1]+(dy||0));
+}
+function dot3(ctx,p,color,r){
+  var q=P3(p); ctx.fillStyle=color; ctx.beginPath(); ctx.arc(q[0],q[1],r||3.2,0,TAU); ctx.fill();
+}
+
+/* ---------- 3D scene ---------- */
+function draw3D(){
+  var ctx=A.ctx, w=A.w, h=A.h;
+  ctx.clearRect(0,0,w,h);
+  buildView(w,h);
+  ctx.font='12px "Hiragino Sans","Yu Gothic",system-ui,sans-serif';
+  ctx.textBaseline='middle';
+
+  /* 座標軸 */
+  line3(ctx,[-0.7,0,0],[2.7,0,0],C.rule,1);
+  line3(ctx,[0,-0.35,0],[0,2.0,0],C.rule,1);
+  line3(ctx,[0,0,-1.7],[0,0,1.7],C.rule,1);
+  text3(ctx,[2.75,0,0],'x',C.ink2,4,0);
+  text3(ctx,[0,2.05,0],'y',C.ink2,4,0);
+  text3(ctx,[0,0,1.78],'z',C.ink2,0,-6);
+
+  var t=st.t, cs=Math.cos(t), R=Math.sqrt(1+cs*cs);
+  var polys=[];
+
+  /* 通過部分（回転コピーの重ね） */
+  if(st.solid && st.theta>0.001){
+    var n=Math.max(1,Math.min(46,Math.round(st.theta/(Math.PI/45))));
+    for(var k=0;k<n;k++){
+      var ph=st.theta*k/n, pts=regionD(ph);
+      polys.push({pts:pts,d:depthOf(pts),fill:C.slateSoft,stroke:null});
+    }
+  }
+  /* 回転前の D と 現在の D */
+  var d0=regionD(0);
+  polys.push({pts:d0,d:depthOf(d0),fill:C.slateSoft,stroke:C.slate,lw:1,dash:[4,3]});
+  var dT=regionD(st.theta);
+  polys.push({pts:dT,d:depthOf(dT),fill:C.slateSoft,stroke:C.slate,lw:1.6});
+
+  /* 切り口（ドーナツ） */
+  if(st.section){
+    var outer=circleAt(t,R), inner=circleAt(t,1);
+    polys.push({pts:outer,hole:inner,d:depthOf(outer),fill:C.redSoft,stroke:C.red,lw:1.2});
+  }
+
+  polys.sort(function(a,b){return a.d-b.d;});
+  polys.forEach(function(o){
+    ctx.beginPath(); path(ctx,o.pts);
+    if(o.hole){ path(ctx,o.hole); ctx.fillStyle=o.fill; ctx.fill('evenodd'); }
+    else { ctx.fillStyle=o.fill; ctx.fill(); }
+    if(o.stroke){
+      ctx.save(); ctx.strokeStyle=o.stroke; ctx.lineWidth=o.lw||1;
+      if(o.dash) ctx.setLineDash(o.dash);
+      ctx.beginPath(); path(ctx,o.pts); ctx.stroke();
+      if(o.hole){ ctx.beginPath(); path(ctx,o.hole); ctx.stroke(); }
+      ctx.restore();
+    }
+  });
+
+  /* 回転軸 ℓ と 半径1の円 */
+  line3(ctx,[1,-0.35,0],[1,2.0,0],C.blue,1.8);
+  text3(ctx,[1,2.05,0],'ℓ',C.blue,4,0);
+  if(st.section){
+    ctx.save(); ctx.strokeStyle=C.blue; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); path(ctx,circleAt(t,1)); ctx.stroke(); ctx.restore();
+  }
+
+  /* 曲線 z = cos y（回転前） */
+  ctx.save(); ctx.strokeStyle=C.ink; ctx.lineWidth=1.6;
+  ctx.beginPath();
+  for(var i=0;i<=36;i++){ var y=HALFPI*i/36, q=P3([0,y,Math.cos(y)]);
+    if(i===0) ctx.moveTo(q[0],q[1]); else ctx.lineTo(q[0],q[1]); }
+  ctx.stroke(); ctx.restore();
+  text3(ctx,[0,0.18,1.0],'z = cos y',C.ink,6,-6);
+  text3(ctx,[0,0.55,0.35],'D',C.ink,0,0);
+
+  /* PQ と 半径 */
+  if(st.section){
+    var Pp=rotAxis([0,t,0],st.theta), Qq=rotAxis([0,t,cs],st.theta), O=[1,t,0];
+    line3(ctx,O,Pp,C.red,1,[3,3]);
+    line3(ctx,O,Qq,C.red,1,[3,3]);
+    line3(ctx,Pp,Qq,C.red,2.6);
+    dot3(ctx,Pp,C.red,3.4); dot3(ctx,Qq,C.red,3.4); dot3(ctx,O,C.blue,3.4);
+    text3(ctx,Pp,'P',C.red,7,4);
+    text3(ctx,Qq,'Q',C.red,7,-4);
+    text3(ctx,O,'y = t',C.blue,8,10);
+  }
+}
+
+/* ---------- 軸方向から見た図 ---------- */
+function drawAxisView(){
+  var ctx=B.ctx, w=B.w, h=B.h;
+  ctx.clearRect(0,0,w,h);
+  var t=st.t, cs=Math.cos(t), R=Math.sqrt(1+cs*cs);
+  var cx=w/2, cy=h/2, sc=Math.min(w,h)/2/(Math.SQRT2*1.32);
+  ctx.font='12px "Hiragino Sans","Yu Gothic",system-ui,sans-serif';
+  ctx.textBaseline='middle';
+  function pt(u,v){ return [cx+u*sc, cy-v*sc]; }
+  function rot2(u,v){ var c=Math.cos(st.theta), s=Math.sin(st.theta); return [u*c-v*s, u*s+v*c]; }
+
+  /* ドーナツ */
+  ctx.beginPath();
+  ctx.arc(cx,cy,R*sc,0,TAU);
+  ctx.moveTo(cx+sc,cy); ctx.arc(cx,cy,sc,0,TAU);
+  ctx.fillStyle=C.redSoft; ctx.fill('evenodd');
+  ctx.strokeStyle=C.red; ctx.lineWidth=1.3;
+  ctx.beginPath(); ctx.arc(cx,cy,R*sc,0,TAU); ctx.stroke();
+
+  /* 半径1の円 */
+  ctx.save(); ctx.setLineDash([4,3]); ctx.strokeStyle=C.blue; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.arc(cx,cy,sc,0,TAU); ctx.stroke(); ctx.restore();
+
+  /* 回転前の線分 */
+  ctx.save(); ctx.setLineDash([4,3]); ctx.strokeStyle=C.slate; ctx.lineWidth=1.4;
+  var a0=pt(-1,0), b0=pt(-1,cs);
+  ctx.beginPath(); ctx.moveTo(a0[0],a0[1]); ctx.lineTo(b0[0],b0[1]); ctx.stroke(); ctx.restore();
+
+  /* 現在の線分 PQ */
+  var rp=rot2(-1,0), rq=rot2(-1,cs), Pp=pt(rp[0],rp[1]), Qq=pt(rq[0],rq[1]);
+  ctx.save(); ctx.setLineDash([3,3]); ctx.strokeStyle=C.red; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(Pp[0],Pp[1]); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(Qq[0],Qq[1]); ctx.stroke(); ctx.restore();
+  ctx.strokeStyle=C.red; ctx.lineWidth=2.6;
+  ctx.beginPath(); ctx.moveTo(Pp[0],Pp[1]); ctx.lineTo(Qq[0],Qq[1]); ctx.stroke();
+
+  [[Pp,C.red],[Qq,C.red],[[cx,cy],C.blue]].forEach(function(o){
+    ctx.fillStyle=o[1]; ctx.beginPath(); ctx.arc(o[0][0],o[0][1],3.6,0,TAU); ctx.fill();
+  });
+  ctx.fillStyle=C.red; ctx.fillText('P',Pp[0]+8,Pp[1]+6); ctx.fillText('Q',Qq[0]+8,Qq[1]-6);
+  ctx.fillStyle=C.blue; ctx.fillText('ℓ',cx+8,cy+10);
+
+  /* 半径の値 */
+  ctx.fillStyle=C.ink2;
+  ctx.fillText('r = 1',10,16);
+  ctx.fillText('R = '+R.toFixed(3),10,34);
+}
+
+/* ---------- S(t) のグラフ ---------- */
+function drawGraph(){
+  var ctx=G.ctx, w=G.w, h=G.h;
+  ctx.clearRect(0,0,w,h);
+  var L=34, Rm=12, Tm=10, Bm=20, gw=w-L-Rm, gh=h-Tm-Bm;
+  var ymax=Math.PI;
+  function X(t){ return L+gw*t/HALFPI; }
+  function Y(v){ return Tm+gh*(1-v/ymax); }
+
+  ctx.strokeStyle=C.rule; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(L,Tm); ctx.lineTo(L,Tm+gh); ctx.lineTo(L+gw,Tm+gh); ctx.stroke();
+
+  ctx.beginPath(); ctx.moveTo(L,Y(0));
+  for(var i=0;i<=60;i++){ var t=HALFPI*i/60, v=Math.PI*Math.cos(t)*Math.cos(t); ctx.lineTo(X(t),Y(v)); }
+  ctx.lineTo(X(HALFPI),Y(0)); ctx.closePath();
+  ctx.fillStyle=C.redSoft; ctx.fill();
+  ctx.strokeStyle=C.red; ctx.lineWidth=1.6;
+  ctx.beginPath();
+  for(var j=0;j<=60;j++){ var t2=HALFPI*j/60, v2=Math.PI*Math.cos(t2)*Math.cos(t2);
+    if(j===0) ctx.moveTo(X(t2),Y(v2)); else ctx.lineTo(X(t2),Y(v2)); }
+  ctx.stroke();
+
+  var s=Math.PI*Math.cos(st.t)*Math.cos(st.t);
+  ctx.save(); ctx.setLineDash([3,3]); ctx.strokeStyle=C.ink; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(X(st.t),Y(0)); ctx.lineTo(X(st.t),Y(s)); ctx.stroke(); ctx.restore();
+  ctx.fillStyle=C.ink; ctx.beginPath(); ctx.arc(X(st.t),Y(s),3.2,0,TAU); ctx.fill();
+
+  ctx.font='11px "Hiragino Sans","Yu Gothic",system-ui,sans-serif';
+  ctx.fillStyle=C.ink2; ctx.textBaseline='middle';
+  ctx.fillText('π',12,Y(Math.PI));
+  ctx.fillText('0',20,Y(0));
+  ctx.fillText('π/2',X(HALFPI)-14,Y(0)+13);
+  ctx.fillText('面積 = V = π²/4 ≒ 2.467',L+8,Tm+10);
+}
+
+/* ---------- 更新 ---------- */
+function render(){
+  var cs=Math.cos(st.t), R=Math.sqrt(1+cs*cs);
+  document.getElementById('vTheta').textContent=Math.round(st.theta*180/Math.PI)+'°';
+  document.getElementById('vT').textContent=st.t.toFixed(2)+'（cos t = '+cs.toFixed(3)+'）';
+  document.getElementById('vR').textContent='= '+R.toFixed(3);
+  document.getElementById('vS').textContent='= '+(Math.PI*cs*cs).toFixed(3);
+  draw3D(); drawAxisView(); drawGraph();
+}
+function fitAll(){ A.fit(); B.fit(); G.fit(); render(); }
+
+/* ---------- 操作 ---------- */
+var sTheta=document.getElementById('sTheta'), sT=document.getElementById('sT');
+sTheta.addEventListener('input',function(){ st.theta=+this.value*Math.PI/180; stop(); render(); });
+sT.addEventListener('input',function(){ st.t=+this.value; render(); });
+
+function toggle(id,key){
+  var b=document.getElementById(id);
+  b.addEventListener('click',function(){
+    st[key]=!st[key]; b.setAttribute('aria-pressed',String(st[key])); render();
+  });
+}
+toggle('bSolid','solid'); toggle('bSect','section');
+
+var playBtn=document.getElementById('bPlay'), raf=null, last=0;
+function step(ts){
+  if(!st.play) return;
+  if(!last) last=ts;
+  var dt=(ts-last)/1000; last=ts;
+  st.theta=(st.theta+dt*0.9)%TAU;
+  sTheta.value=Math.round(st.theta*180/Math.PI);
+  render(); raf=requestAnimationFrame(step);
+}
+function stop(){ st.play=false; playBtn.setAttribute('aria-pressed','false'); playBtn.textContent='回転させる'; if(raf) cancelAnimationFrame(raf); raf=null; last=0; }
+playBtn.addEventListener('click',function(){
+  if(st.play){ stop(); }
+  else { st.play=true; playBtn.setAttribute('aria-pressed','true'); playBtn.textContent='止める'; last=0; raf=requestAnimationFrame(step); }
+});
+document.getElementById('bReset').addEventListener('click',function(){ st.az=0.45; st.el=0.32; render(); });
+
+/* ドラッグで視点 */
+var drag=false, lx=0, ly=0;
+A.cv.addEventListener('pointerdown',function(e){ drag=true; lx=e.clientX; ly=e.clientY; A.cv.setPointerCapture(e.pointerId); });
+A.cv.addEventListener('pointermove',function(e){
+  if(!drag) return;
+  st.az-=(e.clientX-lx)*0.008;
+  st.el=Math.max(-1.2,Math.min(1.35,st.el+(e.clientY-ly)*0.006));
+  lx=e.clientX; ly=e.clientY; render();
+});
+['pointerup','pointercancel','pointerleave'].forEach(function(ev){
+  A.cv.addEventListener(ev,function(){ drag=false; });
+});
+
+window.addEventListener('resize',fitAll);
+if(window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){ readColors(); render(); });
+fitAll();
+})();
+</script>
+</body>
+</html>

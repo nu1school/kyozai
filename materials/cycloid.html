@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>サイクロイドの面積は円の3倍</title>
+<style>
+:root{
+  --board:#1c2e28; --board2:#233a33; --frame:#6b4f35;
+  --chalk:#eeebe0; --dim:#9fb1a8;
+  --coral:#ff8466; --blue:#72c8ff; --yellow:#ffd064; --purple:#c0a6ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#2b2520;color:var(--chalk);
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;}
+.page{max-width:1180px;margin:0 auto;padding:22px 18px 40px}
+h1{font-family:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP",serif;
+  font-weight:600;font-size:clamp(22px,3.2vw,34px);letter-spacing:.04em;margin:4px 0 4px}
+.sub{color:#cdbfa9;margin:0 0 16px;font-size:15px;line-height:1.7}
+.board{background:radial-gradient(ellipse at 40% 30%,var(--board2),var(--board) 70%);
+  border:12px solid var(--frame);border-radius:6px;
+  box-shadow:inset 0 0 60px rgba(0,0,0,.45),0 10px 30px rgba(0,0,0,.4);padding:14px 16px 10px}
+#wrap{width:100%}
+canvas{display:block;width:100%}
+.tray{display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px;padding:14px 4px 4px;
+  border-top:1px dashed rgba(238,235,224,.18);margin-top:8px}
+#play{font:inherit;font-size:17px;font-weight:700;color:#1c2e28;background:var(--chalk);
+  border:none;border-radius:999px;padding:11px 26px;cursor:pointer;min-width:150px;
+  box-shadow:0 3px 0 #b9b4a4}
+#play:active{transform:translateY(2px);box-shadow:0 1px 0 #b9b4a4}
+#play:focus-visible,input:focus-visible,.speed button:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+.ctl{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--dim)}
+.ctl input[type=range]{accent-color:var(--yellow)}
+#scrub{flex:1;min-width:160px}
+.scrubbox{flex:1 1 260px;display:flex;align-items:center;gap:8px;font-size:14px;color:var(--dim)}
+.speed button{font:inherit;font-size:13px;background:transparent;color:var(--dim);
+  border:1px solid rgba(238,235,224,.3);padding:4px 10px;cursor:pointer}
+.speed button:first-child{border-radius:6px 0 0 6px}
+.speed button:last-child{border-radius:0 6px 6px 0}
+.speed button.on{background:rgba(238,235,224,.15);color:var(--chalk)}
+.lower{display:grid;grid-template-columns:1.35fr 1fr;gap:22px;margin-top:22px}
+@media (max-width:820px){.lower{grid-template-columns:1fr}}
+ol.steps{list-style:none;margin:0;padding:0;counter-reset:s}
+ol.steps li{counter-increment:s;position:relative;padding:10px 12px 10px 48px;margin-bottom:6px;
+  border-left:3px solid transparent;color:#a99d8b;line-height:1.65;font-size:14.5px;transition:all .3s}
+ol.steps li::before{content:counter(s);position:absolute;left:12px;top:9px;width:24px;height:24px;
+  border-radius:50%;border:1.5px solid currentColor;text-align:center;font-size:13px;line-height:22px}
+ol.steps li b{display:block;font-size:15.5px;color:inherit}
+ol.steps li.on{color:#f3ead8;border-left-color:var(--yellow);background:rgba(255,208,100,.07)}
+ol.steps li.done{color:#d8ccb7}
+.eq{background:var(--board);border:1px solid #3d5048;border-radius:6px;padding:18px 20px}
+.eq h2{font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-weight:600;font-size:18px;margin:0 0 10px}
+.big{font-family:"Times New Roman","Hiragino Mincho ProN","Yu Mincho",serif;font-size:clamp(20px,2.6vw,27px);
+  line-height:1.9;min-height:3.8em}
+.big .c{color:var(--coral)} .big .y{color:var(--yellow)} .big .w{color:var(--chalk)}
+.note{font-size:13.5px;color:var(--dim);line-height:1.75;margin-top:10px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--dim);margin-top:12px}
+.legend span::before{content:"";display:inline-block;width:14px;height:4px;margin-right:6px;vertical-align:middle;background:var(--k)}
+@media (prefers-reduced-motion:reduce){ol.steps li{transition:none}}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>サイクロイドの面積は、円のちょうど3倍</h1>
+  <p class="sub">面積を横線に細かく切り分けて、同じ高さのまま横へ滑らせる。カヴァリエリの原理で「円1個＋長方形の半分」になることを確かめます。</p>
+
+  <div class="board">
+    <div id="wrap"><canvas id="cv" aria-label="サイクロイドの面積の証明アニメーション"></canvas></div>
+    <div class="tray">
+      <button id="play" type="button">▶ スタート</button>
+      <div class="scrubbox"><span>経過</span><input id="scrub" type="range" min="0" max="1" step="0.001" value="0" aria-label="アニメーションの位置"></div>
+      <label class="ctl">横線の本数 <input id="nStrip" type="range" min="8" max="80" step="2" value="28"> <span id="nVal">28</span></label>
+      <div class="ctl speed" role="group" aria-label="再生速度">
+        <button type="button" data-s="0.5">ゆっくり</button><button type="button" data-s="1" class="on">ふつう</button><button type="button" data-s="2">はやい</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="lower">
+    <ol class="steps" id="steps">
+      <li><b>円を転がす</b>半径 r の円が直線上を1回転すると、円周上の1点がサイクロイドを描く。</li>
+      <li><b>外側に長方形をかく</b>幅 2πr（円周）× 高さ 2r。面積は 4πr²、つまり円4個分。</li>
+      <li><b>相棒の曲線をかく</b>サイクロイド上の各点を、その高さでの円の半弦だけ内側へずらすと、正弦曲線 y = r(1 − cos(x/r)) になる。</li>
+      <li><b>線に切って円へ運ぶ</b>サイクロイドと正弦曲線の間を横線に細分。各線の長さは同じ高さの円の半弦と等しいので、横に滑らせるとぴったり円になる → πr²。</li>
+      <li><b>残りは長方形のちょうど半分</b>正弦曲線の下の部分を180°回転すると、上の部分にぴったり重なる。だから下は長方形の半分 = 2πr²。</li>
+      <li><b>合計する</b>πr² + 2πr² = 3πr²。サイクロイド1アーチの面積は円の3倍（半アーチなら半円の3倍）。</li>
+    </ol>
+    <div class="eq">
+      <h2>面積の計算</h2>
+      <div class="big" id="eq"></div>
+      <div class="legend">
+        <span style="--k:var(--chalk)">サイクロイド</span>
+        <span style="--k:var(--yellow)">正弦曲線と下の部分</span>
+        <span style="--k:var(--blue)">切り分けた横線</span>
+        <span style="--k:var(--coral)">円</span>
+        <span style="--k:var(--purple)">180°回転したコピー</span>
+      </div>
+      <p class="note">同じ高さで切った切り口の長さがすべて等しい2つの図形は、面積も等しい（カヴァリエリの原理）。横線は高さを変えずに横へ動くだけなので、この原理がそのまま目で見えます。</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+const PI=Math.PI, TAU=2*PI;
+const C={chalk:"#eeebe0",dim:"rgba(238,235,224,.35)",coral:"#ff8466",blue:"#72c8ff",yellow:"#ffd064",purple:"#c0a6ff"};
+// タイムライン（秒）
+const TL={roll:[0,4.5],rect:[4.5,6],sine:[6,8],strips:[8,9.8],slide:[9.8,13.8],fillC:[13.8,14.8],mid:[15,16],rot:[16,19.5],sum:[19.8,21.5]};
+const T_END=22.5;
+const STEP_START=[0,4.5,6,8,15,19.8];
+
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),wrap=document.getElementById('wrap');
+const btn=document.getElementById('play'),scrub=document.getElementById('scrub');
+const nIn=document.getElementById('nStrip'),nVal=document.getElementById('nVal');
+const stepEls=[...document.querySelectorAll('#steps li')],eqEl=document.getElementById('eq');
+const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let W,H,R,ox,oy,dpr=1;
+let t=0,playing=false,speed=1,N=28,last=0;
+const CT=TAU+1.9; // 目標の円の中心 x（r単位）
+
+function resize(){
+  dpr=window.devicePixelRatio||1;
+  W=wrap.clientWidth; R=W/10.4; H=R*3.3;
+  cv.style.height=H+'px'; cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ox=0.6*R; oy=H-0.52*R;
+  draw();
+}
+const X=u=>ox+u*R, Y=v=>oy-v*R;
+const clamp=x=>Math.max(0,Math.min(1,x));
+const ease=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const P=k=>clamp((t-TL[k][0])/(TL[k][1]-TL[k][0]));
+function mix(a,b,k){const pa=hex(a),pb=hex(b);return `rgb(${pa.map((v,i)=>Math.round(v+(pb[i]-v)*k)).join(',')})`}
+function hex(h){return [1,3,5].map(i=>parseInt(h.slice(i,i+2),16))}
+function font(sz,it){return `${it?'italic ':''}${Math.max(11,sz)}px "Times New Roman","Hiragino Mincho ProN","Yu Mincho",serif`}
+
+function cycPath(tmax){ctx.beginPath();const n=240;for(let i=0;i<=n;i++){const s=tmax*i/n;const x=X(s-Math.sin(s)),y=Y(1-Math.cos(s));i?ctx.lineTo(x,y):ctx.moveTo(x,y)}}
+function sinePath(a,b,close){ctx.beginPath();const n=160;for(let i=0;i<=n;i++){const u=a+(b-a)*i/n;const x=X(u),y=Y(1-Math.cos(u));i?ctx.lineTo(x,y):ctx.moveTo(x,y)}if(close){ctx.lineTo(X(b),Y(0));ctx.lineTo(X(a),Y(0));ctx.closePath()}}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const lw=Math.max(1.5,R*0.045), fs=R*0.34;
+
+  // うっすら方眼
+  ctx.strokeStyle="rgba(255,255,255,.035)";ctx.lineWidth=1;
+  for(let g=0;g<W;g+=R*0.5){ctx.beginPath();ctx.moveTo(g,0);ctx.lineTo(g,H);ctx.stroke()}
+  for(let g=oy;g>0;g-=R*0.5){ctx.beginPath();ctx.moveTo(0,g);ctx.lineTo(W,g);ctx.stroke()}
+
+  // 基線
+  ctx.strokeStyle=C.dim;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(X(-0.4),Y(0));ctx.lineTo(X(CT+1.4),Y(0));ctx.stroke();
+
+  const pRoll=P('roll'),pRect=P('rect'),pSine=P('sine'),pStr=P('strips'),pSl=P('slide'),
+        pFC=P('fillC'),pMid=P('mid'),pRot=P('rot'),pSum=P('sum');
+
+  // サイクロイドの下（最初は全体、スライド後は正弦曲線の下）を薄く
+  if(pRect>0){
+    ctx.globalAlpha=0.09*pRect*(1-pSl);ctx.fillStyle=C.chalk;cycPath(TAU);ctx.closePath();ctx.fill();
+    ctx.globalAlpha=0.09*pSl*(1-pMid);sinePath(0,TAU,true);ctx.fill();ctx.globalAlpha=1;
+  }
+  // 正弦曲線の下を黄色で
+  if(pMid>0){ctx.globalAlpha=0.32*pMid;ctx.fillStyle=C.yellow;sinePath(0,TAU,true);ctx.fill();ctx.globalAlpha=1}
+
+  // 180°回転コピー
+  if(pRot>0){
+    const a=PI*ease(pRot);
+    for(let k=0;k<2;k++){
+      const cx=X(PI/2+k*PI),cy=Y(1);
+      ctx.save();ctx.translate(cx,cy);ctx.rotate(a);ctx.translate(-cx,-cy);
+      ctx.globalAlpha=0.42*Math.min(1,pRot*4);ctx.fillStyle=C.purple;sinePath(k*PI,(k+1)*PI,true);ctx.fill();
+      ctx.globalAlpha=Math.min(1,pRot*4);ctx.strokeStyle=C.purple;ctx.lineWidth=lw*0.8;ctx.stroke();
+      ctx.restore();
+    }
+    ctx.globalAlpha=1;
+    // 回転の中心
+    ctx.fillStyle=C.purple;for(let k=0;k<2;k++){ctx.beginPath();ctx.arc(X(PI/2+k*PI),Y(1),lw*1.6,0,TAU);ctx.fill()}
+  }
+
+  // 長方形
+  if(pRect>0){
+    ctx.globalAlpha=pRect;ctx.setLineDash([R*0.12,R*0.1]);ctx.strokeStyle=C.dim;ctx.lineWidth=1.4;
+    ctx.strokeRect(X(0),Y(2),TAU*R,2*R);
+    if(pRot>0){ctx.beginPath();ctx.moveTo(X(PI),Y(0));ctx.lineTo(X(PI),Y(2));ctx.stroke()}
+    ctx.setLineDash([]);
+    ctx.fillStyle=C.chalk;ctx.font=font(fs*0.9,false);ctx.textAlign="left";ctx.textBaseline="bottom";
+    ctx.fillText("2πr × 2r = 4πr²",X(0.05),Y(2)-R*0.1);
+    ctx.globalAlpha=1;
+  }
+
+  // 目標の円（点線の輪郭 → 塗り）
+  if(pStr>0){
+    ctx.globalAlpha=pStr;ctx.setLineDash([R*0.1,R*0.08]);ctx.strokeStyle=C.coral;ctx.lineWidth=1.4;
+    ctx.beginPath();ctx.arc(X(CT),Y(1),R,0,TAU);ctx.stroke();ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(X(CT),Y(0));ctx.lineTo(X(CT),Y(2));ctx.stroke();ctx.globalAlpha=1;
+  }
+  if(pFC>0){ctx.globalAlpha=0.3*pFC;ctx.fillStyle=C.coral;ctx.beginPath();ctx.arc(X(CT),Y(1),R,0,TAU);ctx.fill();ctx.globalAlpha=1}
+
+  // 横線（細分）
+  if(pStr>0){
+    const th=Math.max(1,(2*R/N)*0.72);ctx.lineWidth=th;ctx.lineCap="butt";
+    const [sa,sb]=TL.strips,[la,lb]=TL.slide,dur=Math.min(1.8,(lb-la)*0.5);
+    for(let i=0;i<N;i++){
+      const v=(i+0.5)*2/N, th0=Math.acos(1-v), h=Math.sin(th0);
+      const frac=N>1?i/(N-1):0;
+      const grow=ease(clamp((t-sa-frac*(sb-sa)*0.6)/((sb-sa)*0.4)));
+      if(grow<=0)continue;
+      const sl=ease(clamp((t-la-frac*(lb-la-dur))/dur));
+      ctx.strokeStyle=mix(C.blue,C.coral,sl);
+      // 左の横線：[θ−sinθ, θ] → [CT−h, CT]
+      const L0=th0-h, L1=th0;
+      const a1=L0+(CT-h-L0)*sl;
+      ctx.beginPath();ctx.moveTo(X(a1),Y(v));ctx.lineTo(X(a1+h*grow),Y(v));ctx.stroke();
+      // 右の横線：[2π−θ, 2π−θ+sinθ] → [CT, CT+h]
+      const R0=TAU-th0;
+      const b1=R0+(CT-R0)*sl;
+      ctx.beginPath();ctx.moveTo(X(b1+h),Y(v));ctx.lineTo(X(b1+h-h*grow),Y(v));ctx.stroke();
+    }
+  }
+
+  // 正弦曲線
+  if(pSine>0){ctx.strokeStyle=C.yellow;ctx.lineWidth=lw*0.9;sinePath(0,TAU*ease(pSine),false);ctx.stroke()}
+
+  // サイクロイド本体
+  const tr=TAU*(reduce&&pRoll>0?1:pRoll);
+  if(pRoll>0){ctx.strokeStyle=C.chalk;ctx.lineWidth=lw;ctx.lineJoin="round";cycPath(tr);ctx.stroke()}
+
+  // 転がる円
+  const rollAlpha=pRoll<1?1:1-pRect;
+  if(rollAlpha>0){
+    ctx.globalAlpha=rollAlpha;
+    const cx=X(tr),cy=Y(1),px=X(tr-Math.sin(tr)),py=Y(1-Math.cos(tr));
+    ctx.strokeStyle=C.coral;ctx.lineWidth=lw*0.9;ctx.beginPath();ctx.arc(cx,cy,R,0,TAU);ctx.stroke();
+    ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,py);ctx.stroke();
+    ctx.fillStyle=C.coral;ctx.beginPath();ctx.arc(cx,cy,lw*1.2,0,TAU);ctx.fill();
+    ctx.fillStyle=C.chalk;ctx.beginPath();ctx.arc(px,py,lw*2.2,0,TAU);ctx.fill();
+    ctx.font=font(fs,true);ctx.fillStyle=C.coral;ctx.textAlign="left";ctx.textBaseline="middle";
+    ctx.fillText("r",cx+(px-cx)*0.45+R*0.08,cy+(py-cy)*0.45);
+    ctx.globalAlpha=1;
+  }
+
+  // ラベル
+  ctx.textAlign="center";ctx.textBaseline="middle";
+  if(pFC>0){ctx.globalAlpha=pFC;ctx.fillStyle=C.chalk;ctx.font=font(fs*1.15,false);ctx.fillText("πr²",X(CT),Y(1))}
+  if(pRot>0.9){ctx.globalAlpha=clamp((pRot-0.9)*10);ctx.fillStyle="#1c2e28";ctx.font=font(fs*1.15,false);
+    const bx=X(PI),by=Y(0.62),tw=R*1.3;ctx.fillStyle="rgba(28,46,40,.75)";ctx.fillRect(bx-tw/2,by-fs*0.75,tw,fs*1.5);
+    ctx.fillStyle=C.yellow;ctx.fillText("2πr²",bx,by)}
+  if(pSum>0){
+    ctx.globalAlpha=pSum;ctx.font=font(fs*1.05,false);ctx.fillStyle=C.chalk;ctx.textAlign="right";ctx.textBaseline="bottom";
+    ctx.fillText("2πr² + πr² = 3πr²",X(CT+1.3),Y(2)-R*0.1);
+  }
+  ctx.globalAlpha=1;
+}
+
+function updateUI(){
+  let s=0;for(let i=0;i<STEP_START.length;i++)if(t>=STEP_START[i])s=i;
+  const started=t>0||playing;
+  stepEls.forEach((el,i)=>{el.classList.toggle('on',started&&i===s);el.classList.toggle('done',started&&i<s)});
+  let h;
+  if(!started||t<TL.rect[0]) h='<span class="w">S = ？</span>';
+  else if(t<TL.fillC[1]) h='<span class="w">長方形 = 4πr²</span><br><span class="w">S = ？</span>';
+  else if(t<TL.rot[1]) h='<span class="c">間の部分 = πr²</span><br><span class="w">S = </span><span class="c">πr²</span><span class="w"> + ？</span>';
+  else if(t<TL.sum[0]) h='<span class="c">間の部分 = πr²</span><br><span class="y">下の部分 = 4πr² ÷ 2 = 2πr²</span>';
+  else h='<span class="w">S = </span><span class="c">πr²</span><span class="w"> + </span><span class="y">2πr²</span><br><span class="w">　= 3πr²　（円の3倍）</span>';
+  if(eqEl.innerHTML!==h)eqEl.innerHTML=h;
+  scrub.value=t/T_END;
+  btn.textContent=playing?'❚❚ 一時停止':(t>=T_END?'↺ もう一度':(t>0?'▶ 再開':'▶ スタート'));
+}
+
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(playing){t+=dt*speed;if(t>=T_END){t=T_END;playing=false}draw();updateUI()}
+  requestAnimationFrame(loop);
+}
+
+btn.addEventListener('click',()=>{
+  if(playing){playing=false}
+  else{if(t>=T_END)t=0;playing=true}
+  updateUI();draw();
+});
+scrub.addEventListener('input',()=>{playing=false;t=parseFloat(scrub.value)*T_END;draw();updateUI()});
+nIn.addEventListener('input',()=>{N=parseInt(nIn.value);nVal.textContent=N;draw()});
+document.querySelectorAll('.speed button').forEach(b=>b.addEventListener('click',()=>{
+  speed=parseFloat(b.dataset.s);document.querySelectorAll('.speed button').forEach(x=>x.classList.toggle('on',x===b));
+}));
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&e.target.tagName!=='BUTTON'&&e.target.tagName!=='INPUT'){e.preventDefault();btn.click()}});
+window.addEventListener('resize',resize);
+resize();updateUI();requestAnimationFrame(n=>{last=n;loop(n)});
+})();
+</script>
+</body>
+</html>

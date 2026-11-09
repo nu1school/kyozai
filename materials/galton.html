@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ガルトンボード：二項分布から正規分布へ</title>
+<style>
+:root{
+  --board:#1c2e28; --board2:#233a33; --frame:#6b4f35;
+  --chalk:#eeebe0; --dim:#9fb1a8;
+  --coral:#ff8466; --blue:#72c8ff; --yellow:#ffd064;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#2b2520;color:var(--chalk);
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;}
+.page{max-width:1180px;margin:0 auto;padding:22px 18px 40px}
+h1{font-family:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP",serif;
+  font-weight:600;font-size:clamp(22px,3.2vw,34px);letter-spacing:.04em;margin:4px 0 4px}
+.sub{color:#cdbfa9;margin:0 0 16px;font-size:15px;line-height:1.7}
+.board{background:radial-gradient(ellipse at 50% 25%,var(--board2),var(--board) 70%);
+  border:12px solid var(--frame);border-radius:6px;
+  box-shadow:inset 0 0 60px rgba(0,0,0,.45),0 10px 30px rgba(0,0,0,.4);padding:12px 14px 10px}
+#wrap{width:100%}
+canvas{display:block;width:100%}
+.tray{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:14px 4px 4px;
+  border-top:1px dashed rgba(238,235,224,.18);margin-top:8px}
+#play{font:inherit;font-size:17px;font-weight:700;color:#1c2e28;background:var(--chalk);
+  border:none;border-radius:999px;padding:11px 24px;cursor:pointer;min-width:170px;box-shadow:0 3px 0 #b9b4a4}
+#play:active{transform:translateY(2px);box-shadow:0 1px 0 #b9b4a4}
+.sec{font:inherit;font-size:14px;color:var(--chalk);background:transparent;border:1px solid rgba(238,235,224,.35);
+  border-radius:999px;padding:8px 16px;cursor:pointer}
+.sec:hover{background:rgba(238,235,224,.08)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+.ctl{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--dim)}
+.ctl input[type=range]{accent-color:var(--yellow);width:120px}
+.ctl input[type=number]{font:inherit;font-size:15px;width:86px;padding:6px 8px;border-radius:6px;
+  border:1px solid rgba(238,235,224,.35);background:rgba(0,0,0,.2);color:var(--chalk)}
+.ctl output{color:var(--chalk);min-width:2.6em;font-variant-numeric:tabular-nums}
+.seg button{font:inherit;font-size:13px;background:transparent;color:var(--dim);
+  border:1px solid rgba(238,235,224,.3);border-left-width:0;padding:5px 10px;cursor:pointer}
+.seg button:first-child{border-left-width:1px;border-radius:6px 0 0 6px}
+.seg button:last-child{border-radius:0 6px 6px 0}
+.seg button.on{background:rgba(238,235,224,.16);color:var(--chalk)}
+.chk{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--dim);cursor:pointer}
+.chk input{accent-color:var(--yellow);width:16px;height:16px}
+.row2{width:100%;display:flex;flex-wrap:wrap;gap:12px 22px;align-items:center}
+.lower{display:grid;grid-template-columns:1fr 1.15fr;gap:22px;margin-top:22px}
+@media (max-width:820px){.lower{grid-template-columns:1fr}}
+.card{background:var(--board);border:1px solid #3d5048;border-radius:6px;padding:18px 20px}
+.card h2{font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-weight:600;font-size:18px;margin:0 0 12px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:7px 6px;text-align:right;border-bottom:1px solid rgba(238,235,224,.1);font-size:15px}
+th:first-child,td:first-child{text-align:left;color:var(--dim);font-weight:400}
+thead th{color:var(--dim);font-weight:400;font-size:13px}
+.math{font-family:"Times New Roman","Hiragino Mincho ProN","Yu Mincho",serif}
+.expl{line-height:1.85;font-size:14.5px;color:#e2d8c6}
+.expl p{margin:0 0 10px}
+.big{font-family:"Times New Roman","Hiragino Mincho ProN",serif;font-size:clamp(19px,2.3vw,24px);
+  text-align:center;margin:8px 0 14px;color:var(--chalk)}
+.big .y{color:var(--yellow)} .big .c{color:var(--coral)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--dim);margin-top:6px}
+.legend span::before{content:"";display:inline-block;width:14px;height:4px;margin-right:6px;vertical-align:middle;background:var(--k)}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>ガルトンボード：二項分布が正規分布になるまで</h1>
+  <p class="sub">玉はくぎに当たるたびに、確率 p で右へ、1−p で左へ進みます。右に進んだ回数がそのまま入る箱の番号になり、その分布は二項分布。玉を増やすと、山の形が正規分布の曲線に近づいていきます。</p>
+
+  <div class="board">
+    <div id="wrap"><canvas id="cv" aria-label="ガルトンボードのシミュレーション"></canvas></div>
+    <div class="tray">
+      <button id="play" type="button">▶ 500個落とす</button>
+      <label class="ctl">落とす数 <input id="amount" type="number" min="1" max="20000" value="500"></label>
+      <div class="seg" role="group" aria-label="落とす数のプリセット" id="presets">
+        <button type="button" data-v="100">100</button><button type="button" data-v="500" class="on">500</button><button type="button" data-v="1000">1000</button><button type="button" data-v="5000">5000</button>
+      </div>
+      <div class="ctl">速さ
+        <div class="seg" role="group" aria-label="再生速度" id="speeds">
+          <button type="button" data-s="1" class="on">1×</button><button type="button" data-s="2">2×</button><button type="button" data-s="5">5×</button><button type="button" data-s="10">10×</button><button type="button" data-s="30">30×</button>
+        </div>
+      </div>
+      <button id="instant" class="sec" type="button">一瞬で落とす</button>
+      <button id="reset" class="sec" type="button">空にする</button>
+      <div class="row2">
+        <label class="ctl">くぎの段数 <span class="math">n</span> <input id="rows" type="range" min="4" max="20" step="1" value="12"><output id="rowsV">12</output></label>
+        <label class="ctl">右へ行く確率 <span class="math">p</span> <input id="prob" type="range" min="0.05" max="0.95" step="0.05" value="0.5"><output id="probV">0.50</output></label>
+        <label class="chk"><input id="showBin" type="checkbox" checked>二項分布の理論値</label>
+        <label class="chk"><input id="showNorm" type="checkbox" checked>正規分布の曲線</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="lower">
+    <div class="card">
+      <h2>いまの結果</h2>
+      <table>
+        <thead><tr><th></th><th>実験</th><th>理論値</th></tr></thead>
+        <tbody>
+          <tr><td>箱に入った玉</td><td id="sN">0</td><td id="sLeft" style="color:var(--dim)">残り 0</td></tr>
+          <tr><td>平均</td><td id="sMean">–</td><td id="tMean">–</td></tr>
+          <tr><td>分散</td><td id="sVar">–</td><td id="tVar">–</td></tr>
+          <tr><td>標準偏差</td><td id="sSd">–</td><td id="tSd">–</td></tr>
+        </tbody>
+      </table>
+      <div class="legend" style="margin-top:14px">
+        <span style="--k:var(--blue)">実際に入った玉の数</span>
+        <span style="--k:var(--coral)">二項分布の期待個数</span>
+        <span style="--k:var(--yellow)">正規分布の曲線</span>
+      </div>
+    </div>
+    <div class="card expl">
+      <h2>しくみ</h2>
+      <p><span class="math">n</span> 段のくぎを通る間に右へ進んだ回数を <span class="math"><i>X</i></span> とすると、玉が入る箱は左から <span class="math"><i>X</i></span> 番目（0番から数える）。</p>
+      <div class="big"><i>P</i>(<i>X</i> = <i>k</i>) = <sub></sub><sub style="font-size:.7em"><i>n</i></sub>C<sub style="font-size:.7em"><i>k</i></sub> <i>p</i><sup><i>k</i></sup>(1 − <i>p</i>)<sup><i>n</i>−<i>k</i></sup></div>
+      <p>これが二項分布 <span class="math"><i>B</i>(<i>n</i>, <i>p</i>)</span>。段数 <span class="math"><i>n</i></span> が大きくなると、平均 <span class="math"><i>np</i></span>・分散 <span class="math"><i>np</i>(1−<i>p</i>)</span> の正規分布で近似できます（ド・モアブル＝ラプラスの定理）。</p>
+      <div class="big"><i>B</i>(<i>n</i>, <i>p</i>) <span style="font-size:.8em">≈</span> <span class="y"><i>N</i>(<i>np</i>, <i>np</i>(1−<i>p</i>))</span></div>
+      <p style="color:var(--dim);font-size:13.5px">p を 0.5 から離すと山が片寄りますが、段数を増やすとやはり釣鐘形に近づきます。段数や p を変えると箱は空になります。</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+const C={chalk:"#eeebe0",dim:"rgba(238,235,224,.35)",coral:"#ff8466",blue:"#72c8ff",yellow:"#ffd064"};
+const HOP=0.12;        // くぎ1段を進む時間（秒）
+const REL=0.05;        // 玉を放つ間隔（秒）
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),wrap=document.getElementById('wrap');
+const $=id=>document.getElementById(id);
+const btn=$('play'),amountIn=$('amount');
+
+let W,H,dpr=1,d,dy,cx,topY,row0,exitY,binBot,binH,pegR,ballR,G,V0;
+let n=12,p=0.5,speed=1;
+let counts=[],balls=[],pending=0,landed=0,sum=0,sumSq=0,relAcc=0,running=false,last=0;
+let pmf=[];
+
+function logC(nn,k){let s=0;for(let i=1;i<=k;i++)s+=Math.log((nn-k+i)/i);return s}
+function makePmf(){pmf=[];for(let k=0;k<=n;k++)pmf.push(Math.exp(logC(n,k)+k*Math.log(p)+(n-k)*Math.log(1-p)))}
+
+function resetBoard(){
+  counts=new Array(n+1).fill(0);balls=[];pending=0;landed=0;sum=0;sumSq=0;relAcc=0;running=false;
+  makePmf();layout();updateUI();
+}
+function layout(){
+  dpr=window.devicePixelRatio||1;
+  W=wrap.clientWidth;
+  H=Math.max(320,Math.min(780,W*0.78,(window.innerHeight-(wrap.getBoundingClientRect().top+window.scrollY)-((document.querySelector('.tray')||{}).offsetHeight||0)-44)));
+  cv.style.height=H+'px';cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  d=Math.min(W*0.92/(n+1),(H*0.5)/(n*0.87+1.2));
+  dy=d*0.87;cx=W/2;
+  topY=H*0.035;row0=topY+d*1.5;
+  exitY=row0+(n-1)*dy+dy*0.9;
+  binBot=H-12;binH=binBot-exitY-d*0.3;
+  pegR=Math.max(1.5,d*0.085);ballR=Math.max(2,d*0.17);
+  G=d*55;V0=d*4;
+  draw();
+}
+const pegX=(k,j)=>cx+(j-k/2)*d;
+const pegY=k=>row0+k*dy;
+const binX=j=>cx+(j-n/2)*d;
+function contact(k,j){return [pegX(k,j),pegY(k)-pegR-ballR]}
+
+function unit(){
+  const tot=landed+balls.length+pending;
+  const expMax=Math.max(...pmf)*tot;
+  const obs=Math.max(1,...counts);
+  return binH*0.9/Math.max(expMax*1.12,obs,1);
+}
+
+function spawn(t0){
+  const [x1,y1]=contact(0,0);
+  balls.push({k:-1,j:0,j2:0,t:t0,x0:cx+(Math.random()-.5)*d*0.1,y0:topY,x1,y1,hop:0,fall:false,x:cx,y:topY,vy:0});
+}
+function nextHop(b){
+  // 行 b.k のくぎに当たった直後：右へ行くか左へ行くか
+  const right=Math.random()<p;
+  b.j2=b.j+(right?1:0);
+  const [x0,y0]=contact(b.k,b.j);
+  b.x0=x0+(right?1:-1)*pegR*0.4;b.y0=y0;
+  if(b.k+1<n){[b.x1,b.y1]=contact(b.k+1,b.j2)}
+  else{b.x1=binX(b.j2)+(Math.random()-.5)*d*0.3;b.y1=exitY}
+  b.hop=dy*(0.28+Math.random()*0.22);
+}
+function advance(b,dt){
+  if(!b.fall){
+    b.t+=dt;
+    while(!b.fall&&b.t>=HOP){
+      b.t-=HOP;b.k++;b.j=b.j2;
+      if(b.k<n){nextHop(b)}
+      else{b.fall=true;b.x=b.x1;b.y=b.y1;b.vy=V0;const rest=b.t;b.t=0;return fallStep(b,rest)}
+    }
+    const s=b.t/HOP;
+    b.x=b.x0+(b.x1-b.x0)*s;
+    b.y=b.y0+(b.y1-b.y0)*s*s-b.hop*Math.sin(Math.PI*s)*(b.k<0?0:1);
+    return true;
+  }
+  return fallStep(b,dt);
+}
+function fallStep(b,dt){
+  b.y+=b.vy*dt+0.5*G*dt*dt;b.vy+=G*dt;
+  const top=binBot-counts[b.j]*unit()-ballR;
+  if(b.y>=top){counts[b.j]++;landed++;sum+=b.j;sumSq+=b.j*b.j;return false}
+  return true;
+}
+function step(dt){
+  if(pending>0){
+    relAcc+=dt;
+    while(pending>0&&relAcc>=REL){relAcc-=REL;pending--;spawn(0);const nb=balls[balls.length-1];if(!advance(nb,relAcc))balls.pop()}
+  }
+  balls=balls.filter(b=>advance(b,dt));
+  if(pending===0&&balls.length===0){running=false;relAcc=0}
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  // 漏斗
+  ctx.strokeStyle=C.dim;ctx.lineWidth=2;ctx.beginPath();
+  ctx.moveTo(cx-d*1.6,topY-4);ctx.lineTo(cx-ballR*1.6,row0-d*0.9);
+  ctx.moveTo(cx+d*1.6,topY-4);ctx.lineTo(cx+ballR*1.6,row0-d*0.9);ctx.stroke();
+  // くぎ
+  ctx.fillStyle="#cfc8b6";
+  for(let k=0;k<n;k++)for(let j=0;j<=k;j++){ctx.beginPath();ctx.arc(pegX(k,j),pegY(k),pegR,0,Math.PI*2);ctx.fill()}
+  // 箱の仕切り
+  ctx.strokeStyle="rgba(238,235,224,.28)";ctx.lineWidth=1.3;
+  for(let j=0;j<=n+1;j++){const x=binX(j)-d/2;ctx.beginPath();ctx.moveTo(x,exitY);ctx.lineTo(x,binBot);ctx.stroke()}
+  ctx.strokeStyle=C.dim;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(binX(0)-d/2-6,binBot);ctx.lineTo(binX(n)+d/2+6,binBot);ctx.stroke();
+
+  // 棒（たまった玉）
+  const u=unit();
+  for(let j=0;j<=n;j++){
+    const h=counts[j]*u;if(h<=0)continue;
+    const x=binX(j)-d/2+d*0.1,w=d*0.8;
+    const g=ctx.createLinearGradient(0,binBot-h,0,binBot);
+    g.addColorStop(0,"rgba(114,200,255,.95)");g.addColorStop(1,"rgba(114,200,255,.55)");
+    ctx.fillStyle=g;ctx.fillRect(x,binBot-h,w,h);
+    // 数が少ないうちは玉の粒を描く
+    const per=Math.max(1,Math.floor(w/(ballR*2)));
+    if(u*per>=ballR*1.6&&counts[j]<=600){
+      ctx.fillStyle="rgba(28,46,40,.35)";
+      for(let m=0;m<counts[j];m++){
+        const r=Math.floor(m/per),c=m%per;
+        const yy=binBot-(r+0.5)*u*per,xx=x+(c+0.5)*(w/per);
+        ctx.beginPath();ctx.arc(xx,yy,Math.min(ballR,u*per*0.45)*0.55,0,Math.PI*2);ctx.fill();
+      }
+    }
+  }
+  // 二項分布の期待個数
+  if($('showBin').checked&&landed>0){
+    ctx.strokeStyle=C.coral;ctx.lineWidth=2.5;
+    for(let j=0;j<=n;j++){const y=binBot-landed*pmf[j]*u;ctx.beginPath();ctx.moveTo(binX(j)-d*0.42,y);ctx.lineTo(binX(j)+d*0.42,y);ctx.stroke()}
+  }
+  // 正規分布の曲線
+  if($('showNorm').checked&&landed>0){
+    const m=n*p,s=Math.sqrt(n*p*(1-p));
+    ctx.strokeStyle=C.yellow;ctx.lineWidth=2.4;ctx.beginPath();
+    for(let i=0;i<=300;i++){
+      const xv=-0.8+(n+1.6)*i/300;
+      const f=Math.exp(-((xv-m)**2)/(2*s*s))/(s*Math.sqrt(2*Math.PI));
+      const X=binX(xv),Y=binBot-landed*f*u;
+      i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);
+    }
+    ctx.stroke();
+  }
+  // 落ちている玉
+  for(const b of balls){
+    ctx.fillStyle=C.chalk;ctx.beginPath();ctx.arc(b.x,b.y,ballR,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,.9)";ctx.beginPath();ctx.arc(b.x-ballR*0.3,b.y-ballR*0.3,ballR*0.35,0,Math.PI*2);ctx.fill();
+  }
+  // 箱の番号
+  if(d>16){
+    ctx.fillStyle="rgba(238,235,224,.5)";ctx.font=`${Math.min(14,d*0.35)}px "Times New Roman",serif`;
+    ctx.textAlign="center";ctx.textBaseline="top";
+    for(let j=0;j<=n;j++)ctx.fillText(j,binX(j),exitY+3);
+  }
+  // 見出し
+  ctx.fillStyle="rgba(238,235,224,.75)";ctx.font=`italic ${Math.max(14,W*0.018)}px "Times New Roman","Hiragino Mincho ProN",serif`;
+  ctx.textAlign="left";ctx.textBaseline="top";
+  ctx.fillText(`B(${n}, ${p.toFixed(2)})`,14,12);
+}
+
+function fmt(x){return Number.isFinite(x)?x.toFixed(3):'–'}
+function updateUI(){
+  $('sN').textContent=landed.toLocaleString();
+  $('sLeft').textContent='残り '+(pending+balls.length).toLocaleString();
+  const m=landed?sum/landed:NaN,v=landed>1?(sumSq-landed*m*m)/(landed-1):NaN;
+  $('sMean').textContent=fmt(m);$('sVar').textContent=fmt(v);$('sSd').textContent=fmt(Math.sqrt(v));
+  $('tMean').textContent=fmt(n*p);$('tVar').textContent=fmt(n*p*(1-p));$('tSd').textContent=fmt(Math.sqrt(n*p*(1-p)));
+  const amt=getAmount();
+  if(running)btn.textContent='❚❚ 一時停止';
+  else if(pending>0||balls.length>0)btn.textContent='▶ 再開';
+  else btn.textContent=`▶ ${amt.toLocaleString()}個落とす`;
+}
+function getAmount(){let v=parseInt(amountIn.value,10);if(!Number.isFinite(v)||v<1)v=1;return Math.min(20000,v)}
+
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(running){step(dt*speed);draw();updateUI()}
+  requestAnimationFrame(loop);
+}
+
+btn.addEventListener('click',()=>{
+  if(running)running=false;
+  else{if(pending===0&&balls.length===0)pending=getAmount();running=true}
+  updateUI();
+});
+$('instant').addEventListener('click',()=>{
+  // 飛行中の玉と残りも含めて、まとめて一瞬で結果を出す
+  let k=getAmount();
+  if(pending>0||balls.length>0){k=pending;for(const b of balls){finishNow(b)}balls=[];pending=0}
+  for(let i=0;i<k;i++){let x=0;for(let r=0;r<n;r++)if(Math.random()<p)x++;counts[x]++;landed++;sum+=x;sumSq+=x*x}
+  running=false;draw();updateUI();
+});
+function finishNow(b){
+  // 残りの段をまとめて判定
+  let pos=b.fall?b.j:b.j2;
+  if(!b.fall)for(let r=b.k+1;r<n;r++)if(Math.random()<p)pos++;
+  counts[pos]++;landed++;sum+=pos;sumSq+=pos*pos;
+}
+$('reset').addEventListener('click',()=>{resetBoard()});
+amountIn.addEventListener('input',()=>{document.querySelectorAll('#presets button').forEach(x=>x.classList.toggle('on',x.dataset.v===amountIn.value));updateUI()});
+document.querySelectorAll('#presets button').forEach(b=>b.addEventListener('click',()=>{
+  amountIn.value=b.dataset.v;document.querySelectorAll('#presets button').forEach(x=>x.classList.toggle('on',x===b));updateUI();
+}));
+document.querySelectorAll('#speeds button').forEach(b=>b.addEventListener('click',()=>{
+  speed=parseFloat(b.dataset.s);document.querySelectorAll('#speeds button').forEach(x=>x.classList.toggle('on',x===b));
+}));
+$('rows').addEventListener('input',e=>{n=parseInt(e.target.value);$('rowsV').textContent=n;resetBoard()});
+$('prob').addEventListener('input',e=>{p=parseFloat(e.target.value);$('probV').textContent=p.toFixed(2);resetBoard()});
+$('showBin').addEventListener('change',draw);$('showNorm').addEventListener('change',draw);
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&!['BUTTON','INPUT'].includes(e.target.tagName)){e.preventDefault();btn.click()}});
+window.addEventListener('resize',layout);
+resetBoard();requestAnimationFrame(t=>{last=t;loop(t)});
+})();
+</script>
+</body>
+</html>
