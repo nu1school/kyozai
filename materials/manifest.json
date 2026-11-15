@@ -64,6 +64,13 @@
    "folder": "理系数学Ⅲ/積分の応用",
    "file": "materials/rot-line-yx.html",
    "added": "2026-11-09"
+  },
+  {
+   "id": "no15-baikai",
+   "title": "No15 媒介変数表示された曲線の回転体（例1・例3）",
+   "folder": "理系数学演習/積分の応用",
+   "file": "materials/no15-baikai.html",
+   "added": "2026-11-16"
   }
  ]
 }

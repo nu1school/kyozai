@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>媒介変数表示と回転体 例1・例3</title>
+<style>
+/* レイアウト：黒板の中に「立体と式（左）＋xy平面・対応・グラフ（右）」 */
+:root{
+  --board:#1c2e28; --board2:#233a33; --frame:#6b4f35; --room:#2b2520;
+  --chalk:#eeebe0; --dim:#9fb1a8; --paper:#cdbfa9;
+  --coral:#ff8466; --blue:#72c8ff; --yellow:#ffd064; --purple:#c0a6ff;
+  --sans:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;
+  --mincho:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP",serif;
+  --math:"Times New Roman","Hiragino Mincho ProN","Yu Mincho",serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--room);color:var(--chalk);font-family:var(--sans)}
+.page{max-width:1240px;margin:0 auto;padding-block:10px 40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 20px}
+h1{font-family:var(--mincho);font-weight:600;font-size:clamp(19px,2.2vw,26px);letter-spacing:.04em;margin:0;text-wrap:balance}
+.tabs{display:flex;gap:6px}
+.tabs button{font:inherit;font-size:15px;font-weight:700;padding:5px 20px;cursor:pointer;color:var(--paper);
+  background:transparent;border:1.5px solid rgba(205,191,169,.45);border-radius:6px}
+.tabs button.on{background:var(--chalk);color:var(--board);border-color:var(--chalk)}
+.sub{color:var(--paper);margin:5px 0 8px;font-size:14.5px;line-height:1.5;max-width:90em}
+.board{background:radial-gradient(ellipse at 40% 30%,var(--board2),var(--board) 70%);
+  border:8px solid var(--frame);border-radius:6px;
+  box-shadow:inset 0 0 60px rgba(0,0,0,.45),0 10px 30px rgba(0,0,0,.4);padding:8px 10px 6px}
+.stage{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(0,1fr);gap:10px}
+.left{display:flex;flex-direction:column;gap:8px;min-width:0}
+.side{display:flex;flex-direction:column;gap:10px;min-width:0}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.pn{min-width:0;border:1px solid rgba(238,235,224,.14);border-radius:4px;transition:border-color .3s,background .3s}
+.pn.on{border-color:var(--yellow);background:rgba(255,208,100,.05)}
+.pn.main{border-color:transparent}
+canvas{display:block;width:100%}
+#c3{cursor:grab;touch-action:none}
+#c3:active{cursor:grabbing}
+.tray{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 4px 2px;
+  border-top:1px dashed rgba(238,235,224,.18);margin-top:6px}
+#play{font:inherit;font-size:17px;font-weight:700;color:var(--board);background:var(--chalk);
+  border:none;border-radius:999px;padding:11px 22px;cursor:pointer;min-width:132px;box-shadow:0 3px 0 #b9b4a4}
+#play:active{transform:translateY(2px);box-shadow:0 1px 0 #b9b4a4}
+button:focus-visible,input:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+.ctl{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--dim)}
+.ctl input[type=range]{accent-color:var(--yellow);min-width:0}
+.grow{flex:1 1 150px}
+.grow input{flex:1}
+#xv{font-family:var(--math);font-size:16px;color:var(--chalk);min-width:4.6em;font-variant-numeric:tabular-nums}
+.speed button,#resetView{font:inherit;font-size:13px;background:transparent;color:var(--dim);
+  border:1px solid rgba(238,235,224,.3);padding:5px 10px;cursor:pointer}
+.speed{gap:0}
+.speed button:first-child{border-radius:6px 0 0 6px}
+.speed button:last-child{border-radius:0 6px 6px 0}
+.speed button+button{border-left:none}
+.speed button.on{background:rgba(238,235,224,.15);color:var(--chalk)}
+#resetView{border-radius:6px}
+.eq{border-top:1px dashed rgba(238,235,224,.18);padding:6px 6px 0;min-width:0;overflow-x:auto}
+#capt{margin:0 0 2px;font-size:14.5px;line-height:1.55;color:#f3ead8;min-height:3.1em}
+#eq{display:grid;grid-template-rows:repeat(3,auto);grid-auto-flow:column;grid-auto-columns:minmax(max-content,1fr);column-gap:18px}
+.ln{font-family:var(--math);font-size:clamp(17px,1.8vw,21px);min-height:46px;display:flex;align-items:center;
+  white-space:nowrap;opacity:0;visibility:hidden;transition:opacity .4s}
+.ln.show{opacity:1;visibility:visible}
+.ln i{font-style:italic}
+.ln sup{font-size:.62em;line-height:0}
+.ln .fr,.ln .in,.ln .br{margin:0 .12em}
+.ln small{font-family:var(--sans);font-size:13px;color:var(--dim);margin-left:.6em}
+.ans{color:var(--yellow);font-weight:700}
+.y{color:var(--yellow)} .c{color:var(--coral)} .p{color:var(--purple)}
+.fr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.08;font-size:.82em}
+.fr>span:first-child{border-bottom:1.3px solid currentColor;padding:0 .22em .08em}
+.fr>span:last-child{padding:.08em .22em 0}
+.in{display:inline-flex;align-items:center}
+.in .s{font-size:1.75em;line-height:1;margin-right:.05em}
+.lm{display:inline-flex;flex-direction:column;justify-content:space-between;font-size:.62em;line-height:1.5}
+.br{font-size:1.65em;line-height:1;font-weight:300}
+.lower{margin-top:18px}
+ol.steps{list-style:none;margin:0;padding:0;counter-reset:s;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:4px 12px}
+ol.steps li{counter-increment:s;position:relative}
+ol.steps button{display:block;width:100%;text-align:left;font:inherit;background:transparent;cursor:pointer;
+  padding:9px 12px 9px 48px;border:none;border-left:3px solid transparent;color:#a99d8b;line-height:1.65;font-size:14.5px;transition:color .3s,background .3s}
+ol.steps li::before{content:counter(s);position:absolute;left:14px;top:10px;width:24px;height:24px;color:#a99d8b;
+  border-radius:50%;border:1.5px solid currentColor;text-align:center;font-size:13px;line-height:21px;pointer-events:none}
+ol.steps b{display:block;font-size:15.5px;color:inherit}
+ol.steps li.on button{color:#f3ead8;border-left-color:var(--yellow);background:rgba(255,208,100,.07)}
+ol.steps li.on::before{color:var(--yellow)}
+ol.steps li.done button,ol.steps li.done::before{color:#d8ccb7}
+.note{font-size:13px;color:var(--dim);line-height:1.7;margin:8px 0 0}
+@media (max-width:820px){
+  .stage{grid-template-columns:minmax(0,1fr)}
+  .left{display:contents}
+  .left .main{order:1}.side{order:2}.eq{order:3}
+  #eq{grid-template-rows:none;grid-auto-flow:row}
+}
+@media (prefers-reduced-motion:reduce){ol.steps button,.pn,.ln{transition:none}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="head">
+    <h1>媒介変数で表された曲線の回転体</h1>
+    <div class="tabs" role="group" aria-label="例の切りかえ">
+      <button type="button" id="tab1">例1</button>
+      <button type="button" id="tab3">例3</button>
+    </div>
+  </div>
+  <p class="sub" id="prob"></p>
+
+  <div class="board">
+    <div class="stage">
+      <div class="left">
+        <div class="pn main"><canvas id="c3" aria-label="回転体の3D図。ドラッグで回転できます"></canvas></div>
+        <div class="eq" id="eqbox">
+          <p id="capt"></p>
+          <div id="eq"></div>
+        </div>
+      </div>
+      <div class="side">
+        <div class="two">
+          <div class="pn" id="pXY"><canvas id="cXY" aria-label="xy平面の曲線"></canvas></div>
+          <div class="pn" id="pMap"><canvas id="cMap" aria-label="x と t の対応"></canvas></div>
+        </div>
+        <div class="pn" id="pGr"><canvas id="cGr" aria-label="切り口の面積のグラフ"></canvas></div>
+      </div>
+    </div>
+    <div class="tray">
+      <button id="play" type="button">▶ スタート</button>
+      <div class="ctl grow"><label for="scrub">経過</label><input id="scrub" type="range" min="0" max="1" step="0.001" value="0"></div>
+      <div class="ctl grow"><label for="xs">切り口の位置</label><input id="xs" type="range" min="0" max="1" step="0.01" value="0.6"><span id="xv"></span></div>
+      <div class="ctl speed" role="group" aria-label="再生速度">
+        <button type="button" data-s="0.5">ゆっくり</button><button type="button" data-s="1" class="on">ふつう</button><button type="button" data-s="1.8">はやい</button>
+      </div>
+      <label class="ctl"><input id="stopEach" type="checkbox"> 場面ごとに止める</label>
+      <button id="resetView" type="button">視点を戻す</button>
+    </div>
+  </div>
+
+  <div class="lower">
+    <ol class="steps" id="steps"></ol>
+    <p class="note">立体の図は指やマウスでドラッグすると回せます。「切り口の位置」を動かすと、好きな場所の切り口で止められます。</p>
+  </div>
+</div>
+
+<script>
+(function(){
+const PI=Math.PI,TAU=2*PI;
+const C={chalk:"#eeebe0",dim:"#9fb1a8",coral:"#ff8466",blue:"#72c8ff",yellow:"#ffd064",purple:"#c0a6ff"};
+const BLUE=[114,200,255],YEL=[255,208,100];
+const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $=id=>document.getElementById(id);
+
+// タイムライン（秒）
+const TL={draw:[.4,4.4],reg:[4.6,5.6],rot:[5.8,10.2],sweep:[10.6,16],ret:[16,16.8],f1:[17,18.6],f2:[18.8,20.4],f3:[20.6,22.4],build:[22.8,28.2],slabs:[28.6,33.6],ans:[34,39]};
+const T_END=39.6, STEP_START=[0,4.6,10.6,17,22.8,28.6];
+const NS=[4,8,16,32,64];
+
+const frac=(a,b)=>`<span class="fr"><span>${a}</span><span>${b}</span></span>`;
+const integ=(lo,hi)=>`<span class="in"><span class="s">∫</span><span class="lm"><span>${hi}</span><span>${lo}</span></span></span>`;
+const brk=(s,lo,hi)=>`<span class="br">[</span>${s}<span class="br">]</span><span class="lm"><span>${hi}</span><span>${lo}</span></span>`;
+const th='<i>θ</i>';
+
+const EX={
+ 1:{v:'t',a:0,b:1,tA:0,tB:1,R:1,x0:.6,face:true,
+  f:u=>u*u, g:u=>u*u*u, tOfX:x=>Math.sqrt(Math.max(0,x)),
+  integ:u=>2*PI*Math.pow(u,7),
+  cum:x=>PI*Math.pow(Math.max(0,x),4)/4, exact:PI/4, exactL:'π/4',
+  coord:'P(t², t³)', rel:'x = t²', dirX:'x : 0 → 1', dirT:'t : 0 → 1',
+  gx:'πy²（x で積分）', gt:'π(t³)²·2t（t で積分）',
+  prob:'例1　曲線 x = t²，y = t³（0 ≦ t ≦ 1）と x 軸，直線 x = 1 で囲まれた部分を，x 軸のまわりに 1 回転した立体',
+  steps:[
+   ['曲線をかく','t を 0 から 1 まで動かすと，点 P(t², t³) が曲線をえがく。x も y も t で決まる。'],
+   ['x 軸のまわりに回す','曲線と x 軸，直線 x = 1 で囲まれた部分を 1 回転させる。'],
+   ['切り口は円','x 軸に垂直に切ると，半径 y の円。面積は πy²。ここまでは今までの回転体と同じ。'],
+   ['x を t に置き換える','y を x の式にするのは面倒なので，x = t² で置換する。dx = 2t dt，x が 0→1 のとき t も 0→1。'],
+   ['切り口を積み重ねる','上のグラフ（x で見る）と下のグラフ（t で見る）の塗った面積は，いつも同じ体積を表す。'],
+   ['枚数を増やして積分へ','薄い板を 4，8，16，32，64 枚と増やすと，合計は π/4 に近づく。']],
+  eq:[
+   ['<i>dx</i> = 2<i>t</i> <i>dt</i><small>x = t² を微分</small>','f1'],
+   ['<i>x</i> : 0 → 1　のとき　<i>t</i> : 0 → 1','f2'],
+   [`<i>V</i> = π${integ('0','1')}<i>y</i><sup>2</sup><i>dx</i> = π${integ('0','1')}(<i>t</i><sup>3</sup>)<sup>2</sup>·2<i>t</i> <i>dt</i>`,'f3'],
+   [`= 2π${integ('0','1')}<i>t</i><sup>7</sup> <i>dt</i>`,'build'],
+   [`= 2π${brk(frac('<i>t</i><sup>8</sup>','8'),'0','1')}`,'ans'],
+   [`<span class="ans">= ${frac('π','4')}</span>`,'ans2']]},
+ 3:{v:'θ',a:-3,b:3,tA:0,tB:PI,R:2,x0:1.2,face:false,
+  f:u=>3*Math.cos(u), g:u=>2*Math.sin(u), tOfX:x=>Math.acos(Math.max(-1,Math.min(1,x/3))),
+  integ:u=>-12*PI*Math.pow(Math.sin(u),3),
+  cum:x=>{const X=Math.max(-3,x);return 4*PI*((X+3)-(X*X*X+27)/27)}, exact:16*PI, exactL:'16π',
+  coord:'P(3cosθ, 2sinθ)', rel:'x = 3cosθ', dirX:'x : −3 → 3', dirT:'θ : π → 0',
+  gx:'πy²（x で積分）', gt:'π(2sinθ)²(−3sinθ)（θ で積分）',
+  prob:'例3　曲線 x = 3cosθ，y = 2sinθ（0 ≦ θ ≦ π）と x 軸で囲まれた部分を，x 軸のまわりに 1 回転した立体',
+  steps:[
+   ['楕円の上半分をかく','θ を 0 から π まで動かすと，P(3cosθ, 2sinθ) は右端から左端へ進む。θ が増えると x は減る。'],
+   ['x 軸のまわりに回す','上半分の楕円と x 軸で囲まれた部分を回すと，ラグビーボール形（回転楕円体）になる。'],
+   ['切り口は円','x 軸に垂直に切ると，半径 y = 2sinθ の円。面積は πy²。'],
+   ['x を θ に置き換える','x = 3cosθ で置換する。dx = −3sinθ dθ。x が −3→3 のとき θ は π→0 と逆向きに進む。'],
+   ['切り口を積み重ねる','下のグラフは x 軸より下（dx/dθ < 0）にあるが，π から 0 へ逆向きに積分するので体積は正になる。'],
+   ['枚数を増やして積分へ','薄い板を 4，8，16，32，64 枚と増やすと，合計は 16π に近づく。']],
+  eq:[
+   [`<i>dx</i> = −3 sin ${th} <i>d</i>${th}<small>x = 3cosθ を微分</small>`,'f1'],
+   [`<i>x</i> : −3 → 3　のとき　${th} : π → 0`,'f2'],
+   [`<i>V</i> = π${integ('π','0')}(2 sin ${th})<sup>2</sup>(−3 sin ${th}) <i>d</i>${th}`,'f3'],
+   [`= 12π${integ('0','π')}(1 − cos<sup>2</sup>${th}) sin ${th} <i>d</i>${th}`,'build'],
+   [`= 12π${brk('−cos '+th+' + '+frac('cos<sup>3</sup>'+th,'3'),'0','π')}`,'ans'],
+   ['<span class="ans">= 16π</span>','ans2']]}
+};
+
+let cur=1,ex=EX[1];
+const T0=TL.reg[1];
+let t=T0,fresh=true,playing=false,speed=1,last=0,manual=null;
+const VIEW={yaw:.36,pitch:.34};
+let yaw=VIEW.yaw,pitch=VIEW.pitch;
+
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const ease=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const lerp=(a,b,k)=>a+(b-a)*k;
+const P=k=>clamp((t-TL[k][0])/(TL[k][1]-TL[k][0]));
+const reached=k=>k==='ans2'?t>=TL.ans[0]+.9:t>=TL[k][0];
+const fm=(v,d=2)=>(v<0?'−':'')+Math.abs(v).toFixed(d);
+const rOf=x=>Math.max(0,ex.g(ex.tOfX(x)));
+const Sx=x=>PI*rOf(x)**2;
+function range(fn,lo,hi){let mn=0,mx=0;for(let i=0;i<=400;i++){const v=fn(lo+(hi-lo)*i/400);mn=Math.min(mn,v);mx=Math.max(mx,v)}return[mn,mx]}
+
+// 状態
+function uDraw(){return lerp(ex.tA,ex.tB,P('draw'))}
+function X(){
+  const a=ex.a,b=ex.b,m=ex.x0;
+  if(manual!==null&&t<TL.slabs[0])return manual;
+  if(t<TL.sweep[0])return m;
+  if(t<TL.sweep[1]){const p=P('sweep');return p<.2?lerp(m,a,ease(p/.2)):lerp(a,b,(p-.2)/.8)}
+  if(t<TL.ret[1])return lerp(b,m,ease(P('ret')));
+  if(t<TL.build[0])return m;
+  if(t<TL.build[1]){const p=P('build');return p<.12?lerp(m,a,ease(p/.12)):lerp(a,b,(p-.12)/.88)}
+  return b;
+}
+function buildTo(){
+  if(t<TL.build[0]||t>=TL.slabs[0])return null;
+  if(manual!==null)return manual;
+  return P('build')<.12?ex.a:X();
+}
+function curN(){if(t<TL.slabs[0]||t>=TL.ans[0])return 0;return NS[Math.min(4,Math.floor(P('slabs')*5))]}
+function riemann(n){let s=0,d=(ex.b-ex.a)/n;for(let i=0;i<n;i++)s+=Sx(ex.a+(i+.5)*d)*d;return s}
+function secAlpha(){
+  if(t>=TL.slabs[0])return 0;
+  if(manual!==null&&t>=TL.rot[1])return 1;
+  return t>=TL.sweep[0]?clamp((t-TL.sweep[0])/.4):0;
+}
+function phi(){return t<TL.rot[0]?0:t<TL.rot[1]?TAU*ease(P('rot')):TAU}
+function uNow(){return t<TL.sweep[0]&&manual===null?uDraw():ex.tOfX(X())}
+
+// ---- キャンバス ----
+const mk=id=>{const c=$(id);return{c,g:c.getContext('2d'),w:0,h:0}};
+const c3=mk('c3'),cXY=mk('cXY'),cMap=mk('cMap'),cGr=mk('cGr');
+function fit(o,w,h){const d=window.devicePixelRatio||1;o.w=w;o.h=h;o.c.style.height=h+'px';o.c.width=Math.round(w*d);o.c.height=Math.round(h*d);o.g.setTransform(d,0,0,d,0,0)}
+function resize(){
+  const wide=window.innerWidth>820;
+  const w3=c3.c.parentElement.clientWidth;
+  const tray=document.querySelector('.tray').offsetHeight,eqH=$('eqbox').offsetHeight;
+  const top=c3.c.parentElement.getBoundingClientRect().top+window.scrollY;
+  const avail=window.innerHeight-top-tray-eqH-36;
+  const h3=wide?Math.max(250,Math.min(avail,w3*.82)):Math.max(300,w3*.86);
+  fit(c3,w3,h3);
+  const ws=cXY.c.parentElement.clientWidth,total=h3+eqH+8;
+  const hs=wide?Math.max(185,Math.min(ws*1.0,total*.42)):Math.max(205,ws*1.0);
+  fit(cXY,ws,hs);fit(cMap,cMap.c.parentElement.clientWidth,hs);
+  const wg=cGr.c.parentElement.clientWidth;
+  fit(cGr,wg,wide?Math.max(220,total-hs-10):Math.max(260,wg*.7));
+  drawAll();
+}
+function tx(g,s,x,y,o={}){
+  const sz=o.size||14;
+  g.font=`${o.it?'italic ':''}${o.bold?'700 ':''}${sz}px ${o.sans?'"Hiragino Sans","Yu Gothic","Meiryo",sans-serif':'"Times New Roman","Hiragino Mincho ProN","Yu Mincho",serif'}`;
+  g.textAlign=o.al||'center';g.textBaseline=o.bl||'middle';
+  g.lineJoin='round';g.lineWidth=3.5;g.strokeStyle='rgba(28,46,40,.92)';g.strokeText(s,x,y);
+  g.fillStyle=o.c||C.chalk;g.fillText(s,x,y);
+}
+function panelTitle(o,s){tx(o.g,s,8,13,{al:'left',size:13,c:C.dim,sans:true})}
+
+// ---- 3D（平行投影）。x 軸が回転軸，はじめの y 方向が上 ----
+let cy,sy,cp,sp,V3,S3,OX,OY,XC;
+function setView(extra){const y=yaw+extra;cy=Math.cos(y);sy=Math.sin(y);cp=Math.cos(pitch);sp=Math.sin(pitch);V3=[sy*cp,-cy*cp,sp]}
+function raw(p){const x=p[0]-XC,sx=x*cy+p[1]*sy,d=-x*sy+p[1]*cy;return[sx,p[2]*cp+d*sp]}
+function pr(p){const q=raw(p);return[OX+q[0]*S3,OY-q[1]*S3]}
+function fitView(o){
+  setView(0);XC=(ex.a+ex.b)/2;
+  const L=ex.b-ex.a,R=ex.R;let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+  for(const x of [ex.a-.22*L,ex.b+.3*L])for(const y of [-R,R])for(const z of [-R,R*1.15]){const q=raw([x,y,z]);x0=Math.min(x0,q[0]);x1=Math.max(x1,q[0]);y0=Math.min(y0,q[1]);y1=Math.max(y1,q[1])}
+  S3=Math.min(o.w*.94/(x1-x0),(o.h-30)*.97/(y1-y0));
+  OX=o.w/2-(x0+x1)/2*S3;OY=(o.h+26)/2+(y0+y1)/2*S3;
+}
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const LT=(()=>{const v=[.35,-.55,.76],m=Math.hypot(...v);return v.map(a=>a/m)})();
+const ptU=(u,a)=>{const r=Math.max(0,ex.g(u));return[ex.f(u),r*Math.sin(a),r*Math.cos(a)]};
+function poly(L,pts,rgb,alpha,grp,nHint){
+  const c=[0,0,0];pts.forEach(p=>{c[0]+=p[0]/pts.length;c[1]+=p[1]/pts.length;c[2]+=p[2]/pts.length});
+  let n=nHint;
+  if(!n){const a=pts[0],b=pts[1],d=pts[pts.length-1];const u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],v=[d[0]-a[0],d[1]-a[1],d[2]-a[2]];
+    n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+    if(Math.hypot(...n)<1e-12&&pts.length>3){const e=pts[2];const w=[e[0]-a[0],e[1]-a[1],e[2]-a[2]];n=[u[1]*w[2]-u[2]*w[1],u[2]*w[0]-u[0]*w[2],u[0]*w[1]-u[1]*w[0]]}}
+  L.push({pts,rgb,alpha,grp:grp||0,depth:dot([c[0]-XC,c[1],c[2]],V3),n});
+}
+function render(g,L){
+  L.sort((p,q)=>p.grp-q.grp||p.depth-q.depth);
+  for(const f of L){
+    let m=Math.hypot(...f.n);const u=m<1e-12?[1,0,0]:f.n.map(a=>a/m);
+    const s=dot(u,V3)<0?-1:1;
+    const k=.46+.5*Math.max(0,s*dot(u,LT));
+    const col=`rgb(${f.rgb.map(c=>Math.min(255,Math.round(c*k))).join(',')})`;
+    g.globalAlpha=f.alpha;g.fillStyle=col;g.beginPath();
+    f.pts.forEach((p,i)=>{const q=pr(p);i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1])});g.closePath();g.fill();
+    if(f.alpha>=.99){g.strokeStyle=col;g.lineWidth=.7;g.stroke()}
+  }
+  g.globalAlpha=1;
+}
+function addSolid(L,xa,xb,a0,a1,rgb,alpha){
+  if(xb-xa<1e-6||a1-a0<1e-6)return;
+  let u0=ex.tOfX(xa),u1=ex.tOfX(xb);
+  const nu=Math.max(2,Math.ceil(40*Math.abs(u1-u0)/Math.abs(ex.tB-ex.tA))),na=Math.max(3,Math.ceil(44*(a1-a0)/TAU));
+  for(let i=0;i<nu;i++){const ua=lerp(u0,u1,i/nu),ub=lerp(u0,u1,(i+1)/nu);
+    for(let j=0;j<na;j++){const aa=lerp(a0,a1,j/na),ab=lerp(a0,a1,(j+1)/na);
+      poly(L,[ptU(ua,aa),ptU(ub,aa),ptU(ub,ab),ptU(ua,ab)],rgb,alpha,0)}}
+  if(ex.face&&xb>=ex.b-1e-9){const ub=ex.tOfX(ex.b);
+    for(let j=0;j<na;j++){const aa=lerp(a0,a1,j/na),ab=lerp(a0,a1,(j+1)/na);poly(L,[[ex.b,0,0],ptU(ub,aa),ptU(ub,ab)],rgb,alpha,0,[1,0,0])}}
+}
+function addLamina(L,a,rgb,alpha){
+  const n=30;
+  for(let i=0;i<n;i++){const ua=lerp(ex.tA,ex.tB,i/n),ub=lerp(ex.tA,ex.tB,(i+1)/n);
+    const p=ptU(ua,a),q=ptU(ub,a);
+    poly(L,[[p[0],0,0],[q[0],0,0],q,p],rgb,alpha,0,[0,Math.cos(a),-Math.sin(a)])}
+}
+function addSlabs(L,N){
+  const d=(ex.b-ex.a)/N,fwd=V3[0]>0,m=28;
+  for(let i=0;i<N;i++){
+    const x0=ex.a+i*d,x1=x0+d,r=rOf(x0+d/2),grp=fwd?i+1:N-i;
+    if(r<1e-4)continue;
+    const ring=x=>{const a=[];for(let j=0;j<m;j++){const q=TAU*j/m;a.push([x,r*Math.sin(q),r*Math.cos(q)])}return a};
+    const A=ring(x0),B=ring(x1);
+    for(let j=0;j<m;j++){const k=(j+1)%m;poly(L,[A[j],B[j],B[k],A[k]],BLUE,1,grp,[0,(A[j][1]+A[k][1])/2,(A[j][2]+A[k][2])/2])}
+    poly(L,A,BLUE,1,grp,[-1,0,0]);poly(L,B,BLUE,1,grp,[1,0,0]);
+  }
+}
+function line3(g,a,b,col,lw,dash){const p=pr(a),q=pr(b);g.strokeStyle=col;g.lineWidth=lw;g.setLineDash(dash||[]);g.beginPath();g.moveTo(p[0],p[1]);g.lineTo(q[0],q[1]);g.stroke();g.setLineDash([])}
+
+function draw3D(){
+  const o=c3,g=o.g;g.clearRect(0,0,o.w,o.h);
+  fitView(o);
+  const spin=(!reduce&&t>TL.ans[0])?TAU*ease(clamp((t-TL.ans[0]-1)/(TL.ans[1]-TL.ans[0]-1))):0;
+  setView(spin);
+  const L=ex.b-ex.a,R=ex.R,ph=phi(),x=X(),bt=buildTo(),N=curN(),sA=secAlpha();
+  // 軸（奥）
+  line3(g,[0,0,-R*.25],[0,0,R*1.15],'rgba(238,235,224,.28)',1.1,[4,4]);
+  const yt=pr([0,0,R*1.15]);tx(g,'y',yt[0]+9,yt[1],{it:1,size:15,c:C.dim});
+  const F=[];
+  // 立体
+  if(N)addSlabs(F,N);
+  else if(t>=TL.ans[0])addSolid(F,ex.a,ex.b,0,TAU,BLUE,1);
+  else if(bt!==null){addSolid(F,ex.a,bt,0,TAU,BLUE,1);addSolid(F,bt,ex.b,0,TAU,BLUE,.1)}
+  else if(ph>0){
+    let al=.88;if(t>=TL.sweep[0])al=lerp(.88,.2,clamp((t-TL.sweep[0])/.7));
+    addSolid(F,ex.a,ex.b,0,ph,BLUE,al);
+  }
+  // 回転する部分（平らな板）
+  const reg=t>=TL.reg[0]?P('reg'):0;
+  if(reg>0&&ph<TAU-1e-3){addLamina(F,0,YEL,.55*reg);if(ph>0)addLamina(F,ph,YEL,.55)}
+  render(g,F);
+  // かいている途中の曲線と P
+  if(t<TL.rot[0]||(t<TL.rot[1]&&ph<TAU)){
+    const ue=t<TL.draw[1]?uDraw():ex.tB;
+    g.strokeStyle=C.chalk;g.lineWidth=2.6;g.beginPath();
+    for(let i=0;i<=80;i++){const q=pr(ptU(lerp(ex.tA,ue,i/80),0));i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1])}g.stroke();
+    if(t<TL.reg[0]){const q=pr(ptU(ue,0));g.fillStyle=C.coral;g.beginPath();g.arc(q[0],q[1],6,0,TAU);g.fill();tx(g,'P',q[0]+12,q[1]-12,{size:17,bold:1})}
+    if(ex.face&&reg>0){line3(g,ptU(ex.tB,0),[ex.b,0,0],'rgba(238,235,224,.8)',1.4,[5,4])}
+  }
+  // 切り口
+  if(sA>0){
+    const r=rOf(x),pts=[];for(let j=0;j<=60;j++){const q=TAU*j/60;pts.push(pr([x,r*Math.sin(q),r*Math.cos(q)]))}
+    g.globalAlpha=sA*.85;g.fillStyle=C.coral;g.beginPath();pts.forEach((q,i)=>i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]));g.closePath();g.fill();
+    g.globalAlpha=sA;g.strokeStyle=C.chalk;g.lineWidth=1.3;g.stroke();
+    g.lineCap='round';line3(g,[x,0,0],[x,0,r],C.yellow,3.4);g.lineCap='butt';
+    if(r>.12*R){const q=pr([x,0,r*.55]);tx(g,'y',q[0]-12,q[1],{it:1,size:17,c:C.yellow,bold:1})}
+    g.globalAlpha=1;
+  }
+  // x 軸（手前に重ねる。立体の中は薄く）
+  const solidIn=ph>0||N||bt!==null;
+  const ax0=[ex.a-.22*L,0,0],ax1=[ex.b+.3*L,0,0];
+  line3(g,ax0,[ex.a,0,0],'rgba(238,235,224,.85)',1.5);
+  line3(g,[ex.a,0,0],[ex.b,0,0],solidIn?'rgba(238,235,224,.35)':'rgba(238,235,224,.85)',1.5);
+  line3(g,[ex.b,0,0],ax1,'rgba(238,235,224,.85)',1.5);
+  const p0=pr(ax0),p1=pr(ax1),an=Math.atan2(p1[1]-p0[1],p1[0]-p0[0]);
+  g.fillStyle=C.chalk;g.beginPath();g.moveTo(p1[0],p1[1]);g.lineTo(p1[0]-10*Math.cos(an-.38),p1[1]-10*Math.sin(an-.38));g.lineTo(p1[0]-10*Math.cos(an+.38),p1[1]-10*Math.sin(an+.38));g.closePath();g.fill();
+  tx(g,'x',p1[0]+4,p1[1]+13,{it:1,size:16});
+  const o0=pr([0,0,0]);tx(g,'O',o0[0]-11,o0[1]+12,{size:15,bold:1});
+  // 見出し
+  let idx=0;STEP_START.forEach((s,i)=>{if(t>=s)idx=i});
+  tx(g,'①②③④⑤⑥'[idx]+' '+ex.steps[idx][0],10,18,{al:'left',size:Math.max(15,o.w/34),sans:true,bold:1});
+  if(N)tx(g,N+' 枚の板',o.w-12,18,{al:'right',size:Math.max(15,o.w/34),sans:true,bold:1,c:C.yellow});
+  else if(t>=TL.rot[0]&&t<TL.sweep[0])tx(g,Math.round(ph*180/PI)+'°',o.w-12,18,{al:'right',size:Math.max(15,o.w/34),bold:1,c:C.yellow});
+}
+
+// ---- xy 平面 ----
+function drawXY(){
+  const o=cXY,g=o.g,w=o.w,h=o.h;g.clearRect(0,0,w,h);
+  panelTitle(o,'xy 平面');
+  const L=ex.b-ex.a,R=ex.R,xl=ex.a-.14*L,xr=ex.b+.2*L,yb=-.18*R,yt=1.25*R;
+  const top=28,bot=h-50,s=Math.min((w-24)/(xr-xl),(bot-top)/(yt-yb));
+  const ox=w/2-(xl+xr)/2*s,oy=(top+bot)/2+(yb+yt)/2*s;
+  const X2=x=>ox+x*s,Y2=y=>oy-y*s;
+  g.strokeStyle='rgba(238,235,224,.45)';g.lineWidth=1;g.beginPath();g.moveTo(X2(xl),Y2(0));g.lineTo(X2(xr),Y2(0));g.moveTo(X2(0),Y2(yb));g.lineTo(X2(0),Y2(yt));g.stroke();
+  tx(g,'x',X2(xr)-4,Y2(0)+11,{it:1,size:13,c:C.dim});tx(g,'y',X2(0)+9,Y2(yt)+4,{it:1,size:13,c:C.dim});tx(g,'O',X2(0)-9,Y2(0)+10,{size:12,bold:1});
+  tx(g,String(ex.a),X2(ex.a),Y2(0)+12,{size:12,c:C.dim});tx(g,String(ex.b),X2(ex.b)+(ex.face?0:0),Y2(0)+12,{size:12,c:C.dim});
+  const path=(u0,u1)=>{g.beginPath();for(let i=0;i<=100;i++){const u=lerp(u0,u1,i/100);const a=X2(ex.f(u)),b=Y2(ex.g(u));i?g.lineTo(a,b):g.moveTo(a,b)}};
+  const reg=t>=TL.reg[0]?P('reg'):0;
+  if(reg>0){path(ex.tA,ex.tB);g.lineTo(X2(ex.b),Y2(0));g.lineTo(X2(ex.a),Y2(0));g.closePath();g.globalAlpha=reg;g.fillStyle='rgba(255,208,100,.28)';g.fill();g.globalAlpha=1;
+    if(ex.face){g.setLineDash([4,3]);g.strokeStyle='rgba(238,235,224,.7)';g.beginPath();g.moveTo(X2(1),Y2(0));g.lineTo(X2(1),Y2(1));g.stroke();g.setLineDash([])}}
+  g.setLineDash([4,4]);g.strokeStyle='rgba(238,235,224,.3)';g.lineWidth=1.2;path(ex.tA,ex.tB);g.stroke();g.setLineDash([]);
+  const drawing=t<TL.draw[1]&&manual===null;
+  g.strokeStyle=C.chalk;g.lineWidth=2.4;path(ex.tA,drawing?uDraw():ex.tB);g.stroke();
+  const u=uNow(),px=ex.f(u),py=ex.g(u);
+  if(secAlpha()>0){g.strokeStyle=C.yellow;g.lineWidth=3;g.lineCap='round';g.beginPath();g.moveTo(X2(px),Y2(0));g.lineTo(X2(px),Y2(py));g.stroke();g.lineCap='butt';
+    if(py>.15*R)tx(g,'y',X2(px)+(px>=0?-9:9),Y2(py/2),{it:1,size:14,c:C.yellow,bold:1})}
+  g.fillStyle=C.coral;g.beginPath();g.arc(X2(px),Y2(py),5,0,TAU);g.fill();
+  tx(g,'P',X2(px)+(px>ex.b-.15*L?-11:11),Y2(py)-11,{size:14,bold:1});
+  tx(g,ex.coord,w/2,h-35,{size:14,c:C.dim});
+  tx(g,`${ex.v} = ${fm(u)}　x = ${fm(px)}　y = ${fm(py)}`,w/2,h-15,{size:14});
+}
+
+// ---- x と t の対応 ----
+function drawMap(){
+  const o=cMap,g=o.g,w=o.w,h=o.h;g.clearRect(0,0,w,h);
+  panelTitle(o,`x と ${ex.v} の対応`);
+  const l=34,r=w-18,X2=x=>lerp(l,r,(x-ex.a)/(ex.b-ex.a));
+  const y1=h*.36,y2=h*.66;
+  tx(g,ex.rel,w/2,h*.17,{size:16,c:C.yellow,bold:1});
+  const arrowLine=(y,dir,col)=>{g.strokeStyle=col;g.lineWidth=1.6;g.beginPath();g.moveTo(l,y);g.lineTo(r,y);g.stroke();
+    const xe=dir>0?r:l;g.fillStyle=col;g.beginPath();g.moveTo(xe+dir*4,y);g.lineTo(xe-dir*7,y-5);g.lineTo(xe-dir*7,y+5);g.closePath();g.fill()};
+  arrowLine(y1,1,'rgba(238,235,224,.8)');
+  const tDir=ex.tOfX(ex.b)>ex.tOfX(ex.a)?1:-1;
+  arrowLine(y2,tDir,t>=TL.f2[0]?C.coral:'rgba(238,235,224,.8)');
+  tx(g,'x',l-18,y1,{it:1,size:16});tx(g,ex.v,l-18,y2,{it:1,size:16});
+  for(const [xv,lab] of [[ex.a,String(ex.a).replace('-','−')],[ex.b,String(ex.b)]]){
+    g.strokeStyle=C.chalk;g.lineWidth=1.3;g.beginPath();g.moveTo(X2(xv),y1-5);g.lineTo(X2(xv),y1+5);g.moveTo(X2(xv),y2-5);g.lineTo(X2(xv),y2+5);g.stroke();
+    tx(g,lab,X2(xv),y1-15,{size:14});
+    const tu=ex.tOfX(xv),tl=Math.abs(tu-PI)<1e-6?'π':Math.abs(tu)<1e-6?'0':fm(tu,0);
+    tx(g,tl,X2(xv),y2+17,{size:14});
+  }
+  const u=uNow(),xv=ex.f(u);
+  g.setLineDash([3,3]);g.strokeStyle=C.yellow;g.lineWidth=1.2;g.beginPath();g.moveTo(X2(xv),y1);g.lineTo(X2(xv),y2);g.stroke();g.setLineDash([]);
+  g.fillStyle=C.coral;for(const y of [y1,y2]){g.beginPath();g.arc(X2(xv),y,5,0,TAU);g.fill()}
+  tx(g,ex.dirX+'　のとき',w/2,h-36,{size:14});
+  tx(g,ex.dirT,w/2,h-15,{size:15,bold:1,c:tDir<0?C.coral:C.chalk});
+}
+
+// ---- 切り口の面積のグラフ（x で見る／t で見る） ----
+function graph(g,bx,dom,fn,mark,shade,rects,title,col){
+  const [x0,y0,w,h]=bx;
+  tx(g,title,x0+4,y0+9,{al:'left',size:13,c:C.dim,sans:true});
+  const [mn,mx]=range(fn,dom[0],dom[1]);
+  const l=x0+36,r=x0+w-24,tp=y0+24,bt=y0+h-10;
+  const sx=v=>lerp(l,r,(v-dom[0])/(dom[1]-dom[0])),sy=v=>lerp(bt,tp,(v-mn)/(mx-mn||1));
+  g.strokeStyle='rgba(238,235,224,.5)';g.lineWidth=1.1;g.beginPath();g.moveTo(l,sy(0));g.lineTo(r,sy(0));g.stroke();
+  const ends=dom.map(v=>Math.abs(v-PI)<1e-6?'π':String(v).replace('-','−'));
+  tx(g,ends[0],l-6,sy(0),{al:'right',size:13,c:C.dim});tx(g,ends[1],r+6,sy(0),{al:'left',size:13,c:C.dim});
+  const area=(a,b,c)=>{if(Math.abs(b-a)<1e-9)return;g.beginPath();g.moveTo(sx(a),sy(0));for(let i=0;i<=80;i++){const v=lerp(a,b,i/80);g.lineTo(sx(v),sy(fn(v)))}g.lineTo(sx(b),sy(0));g.closePath();g.fillStyle=c;g.fill()};
+  if(shade){const [a,b]=shade;area(Math.min(a,b),Math.max(a,b),col)}
+  if(rects){const d=(dom[1]-dom[0])/rects;g.strokeStyle='rgba(28,46,40,.7)';g.lineWidth=rects<=32?1:.4;g.fillStyle=col;
+    for(let i=0;i<rects;i++){const a=dom[0]+i*d,v=fn(a+d/2);g.fillRect(sx(a),Math.min(sy(v),sy(0)),sx(a+d)-sx(a),Math.abs(sy(v)-sy(0)));g.strokeRect(sx(a),Math.min(sy(v),sy(0)),sx(a+d)-sx(a),Math.abs(sy(v)-sy(0)))}}
+  g.strokeStyle=C.coral;g.lineWidth=2.2;g.beginPath();for(let i=0;i<=120;i++){const v=lerp(dom[0],dom[1],i/120);const a=sx(v),b=sy(fn(v));i?g.lineTo(a,b):g.moveTo(a,b)}g.stroke();
+  if(mark!==null){g.strokeStyle=C.yellow;g.lineWidth=1.3;g.setLineDash([4,3]);g.beginPath();g.moveTo(sx(mark),sy(0));g.lineTo(sx(mark),sy(fn(mark)));g.stroke();g.setLineDash([]);
+    g.fillStyle=C.yellow;g.beginPath();g.arc(sx(mark),sy(fn(mark)),4.5,0,TAU);g.fill()}
+  return{sx,sy};
+}
+function drawGr(){
+  const o=cGr,g=o.g,w=o.w,h=o.h;g.clearRect(0,0,w,h);
+  panelTitle(o,'切り口の面積（同じ体積を 2 通りに見る）');
+  const N=curN(),bt=buildTo(),ans=t>=TL.ans[0],show=t>=TL.sweep[0]||manual!==null;
+  const mk=show&&secAlpha()>0?X():null;
+  const half=(h-24)/2;
+  let shX=null,shT=null;
+  if(ans){shX=[ex.a,ex.b];shT=[ex.tOfX(ex.a),ex.tOfX(ex.b)]}
+  else if(bt!==null){shX=[ex.a,bt];shT=[ex.tOfX(ex.a),ex.tOfX(bt)]}
+  graph(g,[0,22,w,half],[ex.a,ex.b],Sx,mk,shX,N||0,'上：'+ex.gx,'rgba(255,132,102,.5)');
+  g.strokeStyle='rgba(238,235,224,.12)';g.beginPath();g.moveTo(8,22+half);g.lineTo(w-8,22+half);g.stroke();
+  const neg=ex.integ((ex.tA+ex.tB)/2)<0;
+  const gr=graph(g,[0,22+half,w,half],[ex.tA,ex.tB],ex.integ,mk===null?null:ex.tOfX(mk),shT,0,'下：'+ex.gt,neg?'rgba(192,166,255,.5)':'rgba(255,132,102,.5)');
+  if(neg&&t>=TL.f2[0]){
+    const yA=gr.sy(0)+half*.36;
+    g.strokeStyle=C.purple;g.lineWidth=2;g.beginPath();g.moveTo(gr.sx(ex.tB)-8,yA);g.lineTo(gr.sx(ex.tA)+12,yA);g.stroke();
+    g.fillStyle=C.purple;g.beginPath();g.moveTo(gr.sx(ex.tA)+4,yA);g.lineTo(gr.sx(ex.tA)+14,yA-5);g.lineTo(gr.sx(ex.tA)+14,yA+5);g.closePath();g.fill();
+    tx(g,'π から 0 へ逆向きに積分 → 正の体積',(gr.sx(ex.tA)+gr.sx(ex.tB))/2,yA+15,{size:13,c:C.purple,sans:true,bold:1});
+  }
+  let msg='',col=C.chalk;
+  if(ans){msg=`V = ${ex.exactL} = ${(ex.exact/PI).toFixed(4)}π`;col=C.yellow}
+  else if(N)msg=`${N} 枚の合計 ${(riemann(N)/PI).toFixed(4)}π`;
+  else if(bt!==null)msg=`ここまでの体積 ${(ex.cum(bt)/PI).toFixed(4)}π`;
+  if(msg)tx(g,msg,w-10,13,{al:'right',size:Math.min(15,w/24),c:col,bold:1});
+}
+
+function drawAll(){draw3D();drawXY();drawMap();drawGr()}
+
+// ---- UI ----
+const stepsEl=$('steps'),eqEl=$('eq');
+function setExample(n,keepView){
+  cur=n;ex=EX[n];
+  $('tab1').classList.toggle('on',n===1);$('tab3').classList.toggle('on',n===3);
+  $('prob').textContent=ex.prob;
+  stepsEl.innerHTML=ex.steps.map((s,i)=>`<li><button type="button" data-i="${i}"><b>${s[0]}</b>${s[1]}</button></li>`).join('');
+  eqEl.innerHTML=ex.eq.map(l=>`<div class="ln" data-k="${l[1]}"><span>${l[0]}</span></div>`).join('');
+  const xs=$('xs');xs.min=ex.a;xs.max=ex.b;xs.step=(ex.b-ex.a)/200;
+  t=T0;fresh=true;playing=false;manual=null;
+  if(!keepView){yaw=VIEW.yaw;pitch=VIEW.pitch}
+  try{history.replaceState(null,'','#rei'+n)}catch(e){}
+  resize();updateUI();
+}
+function updateUI(){
+  let s=0;STEP_START.forEach((a,i)=>{if(t>=a)s=i});
+  [...stepsEl.children].forEach((el,i)=>{el.classList.toggle('on',!fresh&&i===s);el.classList.toggle('done',!fresh&&i<s)});
+  eqEl.querySelectorAll('.ln').forEach(el=>el.classList.toggle('show',!fresh&&reached(el.dataset.k)));
+  $('capt').textContent=fresh?'「スタート」で最初から再生します。':ex.steps[s][1];
+  $('scrub').value=t/T_END;
+  const x=X();$('xs').value=x;$('xv').textContent='x = '+fm(x);
+  $('pXY').classList.toggle('on',!fresh&&t<TL.reg[1]);
+  $('pMap').classList.toggle('on',t>=TL.f1[0]&&t<TL.build[0]);
+  $('pGr').classList.toggle('on',t>=TL.build[0]);
+  $('play').textContent=playing?'❚❚ 一時停止':(t>=T_END?'↺ もう一度':(fresh?'▶ スタート':'▶ 再開'));
+}
+function loop(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(playing){
+    const prev=t;t+=dt*speed;
+    if($('stopEach').checked){for(const b of STEP_START){if(b>0&&prev<b&&t>=b){t=b;playing=false;break}}}
+    if(t>=T_END){t=T_END;playing=false}
+    drawAll();updateUI();
+  }
+  requestAnimationFrame(loop);
+}
+$('play').addEventListener('click',()=>{
+  if(playing)playing=false;
+  else{if(fresh||t>=T_END)t=0;fresh=false;manual=null;playing=true}
+  drawAll();updateUI();
+});
+$('scrub').addEventListener('input',e=>{playing=false;fresh=false;manual=null;t=parseFloat(e.target.value)*T_END;drawAll();updateUI()});
+$('xs').addEventListener('input',e=>{
+  playing=false;fresh=false;manual=parseFloat(e.target.value);
+  if(t<TL.ret[1])t=TL.ret[1];
+  if(t>=TL.slabs[0])t=TL.build[1]-.001;
+  drawAll();updateUI();
+});
+$('tab1').addEventListener('click',()=>setExample(1));
+$('tab3').addEventListener('click',()=>setExample(3));
+$('resetView').addEventListener('click',()=>{yaw=VIEW.yaw;pitch=VIEW.pitch;drawAll()});
+stepsEl.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  t=STEP_START[+b.dataset.i];fresh=false;manual=null;playing=true;drawAll();updateUI();
+});
+document.querySelectorAll('.speed button').forEach(b=>b.addEventListener('click',()=>{
+  speed=parseFloat(b.dataset.s);document.querySelectorAll('.speed button').forEach(a=>a.classList.toggle('on',a===b));
+}));
+let drag=null;
+c3.c.addEventListener('pointerdown',e=>{drag=[e.clientX,e.clientY];try{c3.c.setPointerCapture(e.pointerId)}catch(_){}});
+c3.c.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  yaw-=(e.clientX-drag[0])*.008;pitch=clamp(pitch+(e.clientY-drag[1])*.006,-.6,1.35);
+  drag=[e.clientX,e.clientY];drawAll();
+});
+const endDrag=()=>{drag=null};
+c3.c.addEventListener('pointerup',endDrag);c3.c.addEventListener('pointercancel',endDrag);
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&e.target.tagName!=='BUTTON'&&e.target.tagName!=='INPUT'){e.preventDefault();$('play').click()}});
+window.addEventListener('resize',resize);
+
+setExample(location.hash==='#rei3'?3:1);
+requestAnimationFrame(n=>{last=n;loop(n)});
+})();
+</script>
+</body>
+</html>
