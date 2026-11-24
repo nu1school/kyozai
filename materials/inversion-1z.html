@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1/z と単位円の鏡</title>
+<style>
+/* VOICE: 授業で使う静かな教材。図が主役で、言葉は少なく
+   IDEA: 方眼紙に描いた作図。単位円を鏡として、点が鏡を抜けて反対側へ移る
+   PICTURE: 大きな複素数平面。元の図形、動いている図形、移った先が重なって見える
+   COLOUR and TYPE: 白い紙に黒インク、元の図形は青緑、移った先は朱。Noto Sans JP
+   LAYOUT: タイトル、図、操作、説明を縦に一列 */
+:root{color-scheme:dark;--bg:#2b2520;--ink:#eeebe0;--sub:#cdbfa9;--grid:rgba(238,235,224,.07);--axis:rgba(238,235,224,.35);--mirror:#9fb1a8;--src:#72c8ff;--img:#ff8466;--line:rgba(238,235,224,.2);--chip:#3a322b}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 "Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;overflow-x:clip}
+main{max-width:860px;margin:0 auto;padding:clamp(20px,4vw,40px) max(4vw,14px) 48px}
+h1{font-family:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP",serif;font-size:clamp(22px,3.2vw,34px);line-height:1.25;font-weight:600;letter-spacing:.04em;margin:0 0 6px;text-wrap:balance}
+.lead{color:var(--sub);margin:0 0 18px;font-size:15px}
+.fig{position:relative;width:100%;aspect-ratio:4/3;max-height:560px;background:#1c2e28;border:12px solid #6b4f35;border-radius:6px;overflow:hidden;touch-action:none;cursor:grab}
+.fig canvas{position:absolute;inset:0;width:100%;height:100%}
+.pats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0 12px}
+.pats button{min-height:48px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+.pats button[aria-pressed=true]{border-color:var(--ink);background:var(--chip)}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:8px 0}
+.row label{font-size:14px;color:var(--sub);display:flex;align-items:center;gap:8px}
+input[type=range]{width:min(320px,60vw);height:32px;accent-color:var(--img)}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--img)}
+.play{min-height:44px;padding:0 24px;border-radius:999px;border:none;background:var(--ink);color:#1c2e28;font-weight:700;font:inherit;font-size:14px;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--img);outline-offset:2px}
+.out{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.out h2{font-size:19px;font-weight:500;margin:0 0 6px;text-wrap:balance;word-break:auto-phrase}
+.out p{margin:0 0 8px}
+.res{font-size:15px}.res b{font-weight:500;color:var(--img)}
+.key{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--sub);margin-top:8px}
+.key span::before{content:"";display:inline-block;width:18px;height:0;border-top:2px solid currentColor;vertical-align:middle;margin-right:6px}
+.k1{color:var(--src)}.k2{color:var(--img)}.k3{color:var(--mirror)}.k3::before{border-top-style:dashed!important}
+.note{font-size:13px;color:var(--sub);margin-top:14px}
+@media(max-width:600px){.pats{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<main>
+<h1>1/z は単位円を鏡にした折り返し</h1>
+<p class="lead">原点からの距離 r を 1/r にすると、単位円の内側と外側が入れ替わる。図形をドラッグして動かし、スライダーで鏡を通り抜ける様子を見てください。</p>
+
+<div class="fig" id="fig"><canvas id="cv"></canvas></div>
+<div class="key"><span class="k1">元の図形</span><span class="k2">移っていく図形</span><span class="k3">鏡（単位円）</span></div>
+
+<div class="pats" id="pats">
+<button data-p="A" aria-pressed="true">原点を通らない円</button>
+<button data-p="B" aria-pressed="false">原点を通る円</button>
+<button data-p="C" aria-pressed="false">原点を通らない直線</button>
+<button data-p="D" aria-pressed="false">原点を通る直線</button>
+</div>
+
+<div class="row">
+<button class="play" id="play">再生</button>
+<label>進み具合 <input type="range" id="s" min="0" max="1000" value="0"></label>
+</div>
+<div class="row">
+<label id="pLab">半径 <input type="range" id="param" min="10" max="200" value="60"></label>
+<label><input type="checkbox" id="conj"> 最後に実軸で折り返す（ここまでやると 1/z）</label>
+</div>
+
+<section class="out">
+<h2 id="name"></h2>
+<p id="why"></p>
+<p class="res" id="res"></p>
+</section>
+<p class="note">折り返しをオフにした状態は z を z/|z|² に移す操作（反転）です。1/z はこれをさらに実軸で折り返したもので、形は変わりません。</p>
+</main>
+<script>
+{
+const cv=document.getElementById('cv'),fig=document.getElementById('fig'),ctx=cv.getContext('2d');
+const sIn=document.getElementById('s'),param=document.getElementById('param'),pLab=document.getElementById('pLab'),conjIn=document.getElementById('conj');
+const nameEl=document.getElementById('name'),whyEl=document.getElementById('why'),resEl=document.getElementById('res'),playBtn=document.getElementById('play');
+const SNAP=0.07;
+const st={mode:'circle',c:{x:1.4,y:0.5},rho:0.6,q:{x:1.2,y:0},phi:Math.PI/2,s:0};
+const presets={A:()=>{st.mode='circle';st.c={x:1.4,y:0.5};st.rho=0.6},B:()=>{st.mode='circle';st.c={x:0.55,y:0.35};st.rho=Math.hypot(.55,.35)},C:()=>{st.mode='line';st.q={x:1.2,y:0};st.phi=Math.PI/2},D:()=>{st.mode='line';st.q={x:0,y:0};st.phi=Math.PI/6}};
+const text={
+A:['原点を通らない円は、原点を通らない円に移る','原点にいくらでも近い点も、いくらでも遠い点もないので、鏡に映しても閉じた円のまま。単位円をまたいでいる円は、内側にある部分と外側にある部分が入れ替わる。'],
+B:['原点を通る円は、直線に移る','円の上には原点にいくらでも近い点がある。その点は鏡の向こうでいくらでも遠くへ飛ぶので、図形は閉じられずに直線に開く。原点そのものは行き先がない。'],
+C:['原点を通らない直線は、原点を通る円に移る','直線にはいくらでも遠い点がある。その点は鏡の内側でいくらでも原点に近づくので、移った先の円は原点を通る。ただし原点そのものには届かないので、原点は除く。'],
+D:['原点を通る直線は、原点を通る直線に移る','方向は変わらないので、同じ直線の上を動くだけ。原点の近くと遠くが入れ替わる。原点は行き先がなく、また到達もしないので除く。']};
+let W=0,H=0,S=1,dpr=1;
+function size(){dpr=window.devicePixelRatio||1;W=fig.clientWidth;H=fig.clientHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);S=Math.min(W/6.2,H/4.6);draw()}
+const X=x=>W/2+x*S,Y=y=>H/2-y*S,ix=px=>(px-W/2)/S,iy=py=>(H/2-py)/S;
+const probe=document.createElement('span');probe.style.display='none';document.body.appendChild(probe);
+const col=n=>{probe.style.color='var('+n+')';return getComputedStyle(probe).color};
+function pattern(){if(st.mode==='circle')return Math.abs(Math.hypot(st.c.x,st.c.y)-st.rho)<1e-9?'B':'A';return Math.hypot(...Object.values(foot()))<1e-9?'D':'C'}
+function dir(){const p=foot0();const r=Math.hypot(p.x,p.y);return r<1e-9?{x:Math.cos(st.phi),y:Math.sin(st.phi)}:{x:-p.y/r,y:p.x/r}}
+function foot0(){const d={x:Math.cos(st.phi),y:Math.sin(st.phi)},t=st.q.x*d.x+st.q.y*d.y;return{x:st.q.x-t*d.x,y:st.q.y-t*d.y}}
+function foot(){return foot0()}
+function pts(){const a=[];if(st.mode==='circle'){for(let i=0;i<=900;i++){const t=i/900*2*Math.PI;a.push({x:st.c.x+st.rho*Math.cos(t),y:st.c.y+st.rho*Math.sin(t)})}}
+else{const p=foot(),d={x:Math.cos(st.phi),y:Math.sin(st.phi)};for(let i=1;i<1400;i++){const u=-Math.PI/2+i/1400*Math.PI,t=Math.tan(u)*1.2;a.push({x:p.x+t*d.x,y:p.y+t*d.y})}}return a}
+function marks(){if(st.mode==='circle'){return[0.4,1.3,2.2,3.3,4.4,5.4].map(t=>({x:st.c.x+st.rho*Math.cos(t+Math.atan2(st.c.y,st.c.x)),y:st.c.y+st.rho*Math.sin(t+Math.atan2(st.c.y,st.c.x))}))}
+const p=foot(),d={x:Math.cos(st.phi),y:Math.sin(st.phi)};return[-2.2,-1,-0.35,0.35,1,2.2].map(t=>({x:p.x+t*d.x,y:p.y+t*d.y}))}
+function tf(z,s){const r=Math.hypot(z.x,z.y);if(r<1e-7)return null;const conj=conjIn.checked;const s1=conj?Math.min(1,s/0.75):s;const f=conj&&s>0.75?1-2*(s-0.75)/0.25:1;const rr=Math.pow(r,1-2*s1),a=Math.atan2(z.y,z.x);return{x:rr*Math.cos(a),y:rr*Math.sin(a)*f}}
+function stroke(list,c,w,dash){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.setLineDash(dash||[]);ctx.beginPath();let pen=false,prev=null;const lim=4000;
+for(const z of list){if(!z){pen=false;continue}const px=X(z.x),py=Y(z.y);const ok=Math.abs(px)<lim&&Math.abs(py)<lim;if(!ok){pen=false;prev=null;continue}
+if(pen&&prev&&Math.hypot(px-prev.x,py-prev.y)>Math.max(W,H)*0.6){pen=false}if(!pen){ctx.moveTo(px,py);pen=true}else ctx.lineTo(px,py);prev={x:px,y:py}}ctx.stroke();ctx.setLineDash([])}
+function dot(z,c,r,hollow){ctx.beginPath();ctx.arc(X(z.x),Y(z.y),r,0,7);if(hollow){ctx.fillStyle='#1c2e28';ctx.fill();ctx.strokeStyle=c;ctx.lineWidth=1.5;ctx.stroke()}else{ctx.fillStyle=c;ctx.fill()}}
+function draw(){if(!W)return;ctx.clearRect(0,0,W,H);const g=col('--grid'),ax=col('--axis'),mi=col('--mirror'),sc=col('--src'),im=col('--img'),ink=col('--ink'),sub=col('--sub');
+ctx.lineWidth=1;ctx.strokeStyle=g;for(let k=-8;k<=8;k++){ctx.beginPath();ctx.moveTo(X(k*0.5),0);ctx.lineTo(X(k*0.5),H);ctx.stroke();ctx.beginPath();ctx.moveTo(0,Y(k*0.5));ctx.lineTo(W,Y(k*0.5));ctx.stroke()}
+ctx.strokeStyle=ax;ctx.beginPath();ctx.moveTo(0,Y(0));ctx.lineTo(W,Y(0));ctx.moveTo(X(0),0);ctx.lineTo(X(0),H);ctx.stroke();
+ctx.font='13px "Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif';ctx.fillStyle=sub;ctx.fillText('1',X(1)+4,Y(0)+16);ctx.fillText('i',X(0)+6,Y(1)-6);ctx.fillText('O',X(0)-16,Y(0)+16);
+ctx.setLineDash([5,5]);ctx.strokeStyle=mi;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(X(0),Y(0),S,0,7);ctx.stroke();ctx.setLineDash([]);
+const P=pts(),s=st.s,pat=pattern();
+stroke(P,sc,2);
+if(s>0){const fin=P.map(z=>tf(z,1));stroke(fin,im,1,[3,4])}
+stroke(P.map(z=>tf(z,s)),im,2.5);
+for(const m of marks()){const a=tf(m,s);if(!a)continue;ctx.strokeStyle=sub;ctx.lineWidth=0.8;ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(X(m.x),Y(m.y));ctx.lineTo(X(a.x),Y(a.y));ctx.stroke();ctx.setLineDash([]);dot(m,sc,3.5);dot(a,im,3.5)}
+if(pat==='B'||pat==='D')dot({x:0,y:0},sc,5,true);
+if((pat==='C'||pat==='D')&&s>0.98)dot({x:0,y:0},im,5,true);
+ctx.fillStyle=mi;ctx.fillText('鏡',X(Math.cos(2.3))-22,Y(Math.sin(2.3))-4);
+info(pat)}
+const f2=v=>(Math.abs(v)<0.005?0:v).toFixed(2);
+const cpx=(x,y)=>{const yy=conjIn.checked?-y:y;if(Math.abs(yy)<0.005)return f2(x);if(Math.abs(x)<0.005)return f2(yy)+'i';return f2(x)+(yy<0?' − ':' + ')+f2(Math.abs(yy))+'i'};
+function info(pat){nameEl.textContent=text[pat][0];whyEl.textContent=text[pat][1];let r='';
+if(pat==='A'){const k=st.c.x**2+st.c.y**2-st.rho**2;r='移った先：中心 '+cpx(st.c.x/k,st.c.y/k)+'、半径 '+f2(st.rho/Math.abs(k))+' の円'}
+else if(pat==='B'){r='移った先：原点から '+f2(1/(2*st.rho))+' 離れた直線（元の円の中心の方向に垂直）'}
+else if(pat==='C'){const p=foot(),q=p.x**2+p.y**2;r='移った先：中心 '+cpx(p.x/(2*q),p.y/(2*q))+'、半径 '+f2(1/(2*Math.sqrt(q)))+' の円（原点を除く）'}
+else{r='移った先：同じ向きの、原点を通る直線（原点を除く）'}
+resEl.innerHTML='';const b=document.createElement('b');b.textContent=r;resEl.appendChild(b)}
+function setParamUI(){if(st.mode==='circle'){pLab.firstChild.textContent='半径 ';param.min=10;param.max=200;param.value=Math.round(st.rho*100)}else{pLab.firstChild.textContent='直線の向き ';param.min=0;param.max=179;param.value=Math.round(((st.phi*180/Math.PI)%180+180)%180)}}
+function snap(){if(st.mode==='circle'){const d=Math.hypot(st.c.x,st.c.y);if(Math.abs(d-st.rho)<SNAP&&d>1e-6){st.c={x:st.c.x/d*st.rho,y:st.c.y/d*st.rho}}}
+else{const p=foot0();if(Math.hypot(p.x,p.y)<SNAP){st.q={x:0,y:0}}}}
+function press(pat){document.querySelectorAll('#pats button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.p===pat?'true':'false'))}
+document.getElementById('pats').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;presets[b.dataset.p]();setParamUI();st.s=0;sIn.value=0;draw();press(pattern());play()});
+sIn.addEventListener('input',()=>{stop();st.s=sIn.value/1000;draw()});
+param.addEventListener('input',()=>{if(st.mode==='circle'){st.rho=param.value/100}else{st.phi=param.value*Math.PI/180}snap();draw();press(pattern())});
+conjIn.addEventListener('change',draw);
+let drag=false;
+fig.addEventListener('pointerdown',e=>{drag=true;fig.setPointerCapture(e.pointerId);move(e)});
+fig.addEventListener('pointermove',e=>{if(drag)move(e)});
+fig.addEventListener('pointerup',()=>{drag=false});fig.addEventListener('pointercancel',()=>{drag=false});
+function move(e){const r=fig.getBoundingClientRect(),x=ix(e.clientX-r.left),y=iy(e.clientY-r.top);if(st.mode==='circle')st.c={x,y};else st.q={x,y};snap();draw();press(pattern())}
+let raf=0,t0=0;
+function play(){stop();const from=st.s>=0.999?0:st.s;t0=performance.now()-from*2600;playBtn.textContent='停止';const step=now=>{st.s=Math.min(1,(now-t0)/2600);sIn.value=st.s*1000;draw();if(st.s<1)raf=requestAnimationFrame(step);else{raf=0;playBtn.textContent='再生'}};raf=requestAnimationFrame(step)}
+function stop(){if(raf){cancelAnimationFrame(raf);raf=0}playBtn.textContent='再生'}
+playBtn.addEventListener('click',()=>{raf?stop():play()});
+const ro=new ResizeObserver(size);ro.observe(fig);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
+new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+setParamUI();size();
+if(matchMedia('(prefers-reduced-motion: no-preference)').matches)play();else{st.s=1;sIn.value=1000;draw()}
+}
+</script>
+</body>
+</html>
